@@ -12,9 +12,11 @@ import {
 import { buildSharedRuntimeRemediation } from "../runtime/shared-cli.js";
 import type { AgentBadgeConfig } from "../config/config-schema.js";
 import type { PackageManager } from "../runtime/package-manager.js";
+import { resolveAgentBadgePaths } from "../repo/agent-badge-directory.js";
 
 export interface ApplyRepoLocalRuntimeWiringOptions {
   readonly cwd: string;
+  readonly agentBadgeDirectory?: string;
   readonly packageManager: PackageManager;
   readonly runtimeDependencySpecifier: string;
   readonly refresh: AgentBadgeConfig["refresh"];
@@ -22,6 +24,7 @@ export interface ApplyRepoLocalRuntimeWiringOptions {
 
 export interface ApplyMinimalRepoScaffoldOptions {
   readonly cwd: string;
+  readonly agentBadgeDirectory?: string;
   readonly packageManager: PackageManager;
   readonly refresh: AgentBadgeConfig["refresh"];
 }
@@ -46,11 +49,13 @@ const packageJsonPathLabel = "package.json";
 const gitignorePathLabel = ".gitignore";
 const prePushHookPathLabel = ".git/hooks/pre-push";
 const runtimePackageName = "@legotin/agent-badge";
-const managedGitignoreEntries = [
-  ".agent-badge/state.json",
-  ".agent-badge/cache/",
-  ".agent-badge/logs/"
-] as const;
+function getManagedGitignoreEntries(agentBadgeDirectory: string): string[] {
+  return [
+    `${agentBadgeDirectory}/state.json`,
+    `${agentBadgeDirectory}/cache/`,
+    `${agentBadgeDirectory}/logs/`
+  ];
+}
 
 function isRecord(value: unknown): value is JsonObject {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -265,14 +270,17 @@ function stripManagedGitignoreBlock(existingContent: string): {
   };
 }
 
-function buildManagedGitignoreBlock(baseContent: string): string | undefined {
+function buildManagedGitignoreBlock(
+  baseContent: string,
+  agentBadgeDirectory: string
+): string | undefined {
   const ignoredEntries = new Set(
     baseContent
       .split("\n")
       .map((line) => line.trim())
       .filter((line) => line.length > 0)
   );
-  const missingEntries = managedGitignoreEntries.filter(
+  const missingEntries = getManagedGitignoreEntries(agentBadgeDirectory).filter(
     (entry) => !ignoredEntries.has(entry)
   );
 
@@ -424,6 +432,7 @@ async function ensureExecutable(targetPath: string): Promise<boolean> {
 
 async function applyRepoOwnedScaffold(options: {
   readonly cwd: string;
+  readonly agentBadgeDirectory: string;
   readonly packageManager: PackageManager;
   readonly refresh: AgentBadgeConfig["refresh"];
   readonly result: RepoLocalRuntimeWiringResult;
@@ -447,7 +456,10 @@ async function applyRepoOwnedScaffold(options: {
   );
   const nextGitignoreContent = buildGitignoreContent(
     strippedGitignore.baseContent,
-    buildManagedGitignoreBlock(strippedGitignore.baseContent)
+    buildManagedGitignoreBlock(
+      strippedGitignore.baseContent,
+      options.agentBadgeDirectory
+    )
   );
 
   if (existingGitignoreContent === undefined) {
@@ -515,6 +527,9 @@ export async function applyMinimalRepoScaffold(
     reused: [],
     warnings: []
   };
+  const agentBadgeDirectory =
+    options.agentBadgeDirectory ??
+    resolveAgentBadgePaths({ cwd: options.cwd }).directory;
   const packageJsonPath = join(options.cwd, packageJsonPathLabel);
   const packageJson = await readPackageJson(packageJsonPath);
   let packageJsonChanged = false;
@@ -581,6 +596,7 @@ export async function applyMinimalRepoScaffold(
 
   await applyRepoOwnedScaffold({
     cwd: options.cwd,
+    agentBadgeDirectory,
     packageManager: options.packageManager,
     refresh: options.refresh,
     result
@@ -598,6 +614,9 @@ export async function applyRepoLocalRuntimeWiring(
     reused: [],
     warnings: []
   };
+  const agentBadgeDirectory =
+    options.agentBadgeDirectory ??
+    resolveAgentBadgePaths({ cwd: options.cwd }).directory;
   const packageJsonPath = join(options.cwd, packageJsonPathLabel);
   const existingPackageJson = await readPackageJson(packageJsonPath);
   let packageJsonChanged = false;
@@ -653,6 +672,7 @@ export async function applyRepoLocalRuntimeWiring(
 
   await applyRepoOwnedScaffold({
     cwd: options.cwd,
+    agentBadgeDirectory,
     packageManager: options.packageManager,
     refresh: options.refresh,
     result

@@ -24,6 +24,7 @@ import {
   parseAgentBadgeState,
   publishBadgeToGist,
   resolveGitHubAuthToken,
+  resolveAgentBadgePaths,
   runInitPreflight,
   runIncrementalRefresh,
   upsertReadmeBadge,
@@ -70,9 +71,6 @@ export interface InitCommandResult {
   readonly scaffold: AgentBadgeScaffoldResult;
   readonly runtimeWiring: MinimalRepoScaffoldResult;
 }
-const CONFIG_PATH = ".agent-badge/config.json";
-const STATE_PATH = ".agent-badge/state.json";
-
 function getBlockedMessage(preflight: InitPreflightResult): string {
   return (
     preflight.git.blockingMessage ??
@@ -408,26 +406,48 @@ async function readAgentBadgeJson(targetPath: string): Promise<unknown> {
   return JSON.parse(await readFile(targetPath, "utf8")) as unknown;
 }
 
-async function loadPersistedConfig(cwd: string): Promise<AgentBadgeConfig> {
-  return parseAgentBadgeConfig(await readAgentBadgeJson(join(cwd, CONFIG_PATH)));
+async function loadPersistedConfig(
+  cwd: string,
+  agentBadgeDirectory: string
+): Promise<AgentBadgeConfig> {
+  const paths = resolveAgentBadgePaths({
+    cwd,
+    env: { AGENT_BADGE_DIR: agentBadgeDirectory }
+  });
+
+  return parseAgentBadgeConfig(await readAgentBadgeJson(paths.configPath));
 }
 
-async function loadPersistedState(cwd: string): Promise<AgentBadgeState> {
-  return parseAgentBadgeState(await readAgentBadgeJson(join(cwd, STATE_PATH)));
+async function loadPersistedState(
+  cwd: string,
+  agentBadgeDirectory: string
+): Promise<AgentBadgeState> {
+  const paths = resolveAgentBadgePaths({
+    cwd,
+    env: { AGENT_BADGE_DIR: agentBadgeDirectory }
+  });
+
+  return parseAgentBadgeState(await readAgentBadgeJson(paths.statePath));
 }
 
 async function writePersistedState(
   cwd: string,
+  agentBadgeDirectory: string,
   config: AgentBadgeConfig,
   state: AgentBadgeState
 ): Promise<void> {
+  const paths = resolveAgentBadgePaths({
+    cwd,
+    env: { AGENT_BADGE_DIR: agentBadgeDirectory }
+  });
+
   await writeFile(
-    join(cwd, CONFIG_PATH),
+    paths.configPath,
     `${JSON.stringify(config, null, 2)}\n`,
     "utf8"
   );
   await writeFile(
-    join(cwd, STATE_PATH),
+    paths.statePath,
     `${JSON.stringify(state, null, 2)}\n`,
     "utf8"
   );
@@ -470,7 +490,7 @@ export async function runInitCommand(
       });
     } catch (error) {
       const detail = error instanceof Error ? ` ${error.message}` : "";
-      const message = `Git bootstrap failed, so init stopped before writing .agent-badge.${detail}`;
+      const message = `Git bootstrap failed, so init stopped before writing agent-badge data.${detail}`;
 
       writeLines(stdout, [`- Blocked: ${message}`]);
       throw new Error(message);
@@ -480,7 +500,7 @@ export async function runInitCommand(
 
     if (!preflight.git.isRepo) {
       const message =
-        "Git bootstrap did not produce a repository, so init stopped before writing .agent-badge.";
+        "Git bootstrap did not produce a repository, so init stopped before writing agent-badge data.";
 
       writeLines(stdout, [`- Blocked: ${message}`]);
       throw new Error(message);
@@ -497,12 +517,16 @@ export async function runInitCommand(
     cwd: preflight.cwd,
     preflight
   });
-  const config = await loadPersistedConfig(preflight.cwd);
+  const config = await loadPersistedConfig(
+    preflight.cwd,
+    preflight.agentBadgeDirectory
+  );
 
   writeScaffoldSummary(stdout, scaffold);
 
   const runtimeWiring = await applyMinimalRepoScaffold({
     cwd: preflight.cwd,
+    agentBadgeDirectory: preflight.agentBadgeDirectory,
     packageManager: preflight.packageManager.name,
     refresh: config.refresh
   });
@@ -513,7 +537,10 @@ export async function runInitCommand(
     formatSharedRuntimeLine(sharedRuntime)
   ]);
 
-  const state = await loadPersistedState(preflight.cwd);
+  const state = await loadPersistedState(
+    preflight.cwd,
+    preflight.agentBadgeDirectory
+  );
   const gistClient =
     options.gistClient ??
     createGitHubGistClient({
@@ -548,6 +575,7 @@ export async function runInitCommand(
 
   await writePersistedState(
     preflight.cwd,
+    preflight.agentBadgeDirectory,
     nextPublishState.config,
     nextPublishState.state
   );
@@ -600,6 +628,7 @@ export async function runInitCommand(
   try {
     const refresh = await runIncrementalRefresh({
       cwd: preflight.cwd,
+      agentBadgeDirectory: preflight.agentBadgeDirectory,
       homeRoot,
       config: nextPublishState.config,
       state: nextPublishState.state,
@@ -613,9 +642,15 @@ export async function runInitCommand(
     });
 
     await Promise.all([
-      writePersistedState(preflight.cwd, nextPublishState.config, refreshedState),
+      writePersistedState(
+        preflight.cwd,
+        preflight.agentBadgeDirectory,
+        nextPublishState.config,
+        refreshedState
+      ),
       writeRefreshCache({
         cwd: preflight.cwd,
+        agentBadgeDirectory: preflight.agentBadgeDirectory,
         cache: refresh.cache
       })
     ]);
@@ -631,7 +666,12 @@ export async function runInitCommand(
     });
     const publishedState = publishResult.state;
 
-    await writePersistedState(preflight.cwd, nextPublishState.config, publishedState);
+    await writePersistedState(
+      preflight.cwd,
+      preflight.agentBadgeDirectory,
+      nextPublishState.config,
+      publishedState
+    );
     writeSharedPublishSummary(stdout, publishResult);
     const recoveryResult = resolveInitRecoveryResult({
       beforeConfig: config,

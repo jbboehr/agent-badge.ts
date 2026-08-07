@@ -1,6 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { join, resolve } from "node:path";
+import { resolve } from "node:path";
 
 import {
   applyPublishAttemptFailure,
@@ -16,6 +16,7 @@ import {
   parseAgentBadgeState,
   publishBadgeToGist,
   resolveGitHubAuthToken,
+  resolveAgentBadgePaths,
   resolvePricingCatalog,
   toPublishAttemptChangedBadge,
   runFullBackfillScan,
@@ -53,8 +54,6 @@ export interface PublishCommandResult {
   readonly state: AgentBadgeState;
 }
 
-const CONFIG_PATH = ".agent-badge/config.json";
-const STATE_PATH = ".agent-badge/state.json";
 const PUBLISH_NOT_CONFIGURED_ERROR =
   "Publish is not configured. Run `agent-badge init` or re-run init with `--gist-id <id>` first.";
 const GITHUB_AUTH_MISSING_ERROR_MESSAGE =
@@ -139,13 +138,17 @@ function buildSessionKey(session: {
 async function buildPublisherObservations(options: {
   readonly attribution: AttributeBackfillSessionsResult;
   readonly cwd: string;
+  readonly agentBadgeDirectory: string;
   readonly homeRoot: string;
   readonly includeEstimatedCost: boolean;
 }): Promise<SharedContributorObservationMap> {
   const estimatedCostBySessionKey = new Map<string, number>();
 
   if (options.includeEstimatedCost && options.attribution.sessions.length > 0) {
-    const pricingCatalog = await resolvePricingCatalog({ cwd: options.cwd });
+    const pricingCatalog = await resolvePricingCatalog({
+      cwd: options.cwd,
+      agentBadgeDirectory: options.agentBadgeDirectory
+    });
     const estimatedCosts = await estimateSessionCostsUsdMicrosByKey({
       sessions: options.attribution.sessions.map(
         (attributedSession) => attributedSession.session
@@ -190,8 +193,9 @@ export async function runPublishCommand(
   const startAtMs = Date.now();
   const now = new Date().toISOString();
   const env = options.env ?? process.env;
-  const configPath = join(cwd, CONFIG_PATH);
-  const statePath = join(cwd, STATE_PATH);
+  const agentBadgePaths = resolveAgentBadgePaths({ cwd, env });
+  const configPath = agentBadgePaths.configPath;
+  const statePath = agentBadgePaths.statePath;
   let previousState: AgentBadgeState | null = null;
   let alreadyReported = false;
   try {
@@ -224,6 +228,7 @@ export async function runPublishCommand(
     const publisherObservations = await buildPublisherObservations({
       attribution,
       cwd,
+      agentBadgeDirectory: agentBadgePaths.directory,
       homeRoot,
       includeEstimatedCost:
         config.badge.mode === "combined" || config.badge.mode === "cost"
@@ -266,6 +271,7 @@ export async function runPublishCommand(
     writeLine(stdout, `- lastPublishedHash: ${nextState.publish.lastPublishedHash}`);
     await appendAgentBadgeLog({
       cwd,
+      agentBadgeDirectory: agentBadgePaths.directory,
       entry: buildLogEntry({
         operation: "publish",
         status: "success",
@@ -344,6 +350,7 @@ export async function runPublishCommand(
 
     await appendAgentBadgeLog({
       cwd,
+      agentBadgeDirectory: agentBadgePaths.directory,
       entry: buildLogEntry({
         operation: "publish",
         status: "failure",

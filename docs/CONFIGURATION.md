@@ -4,6 +4,25 @@
 
 Commands below are shown as `agent-badge ...` for readability. Use them directly when the shared runtime is on your `PATH`. If you chose the direct package-install alternative, use your package manager's exec wrapper instead.
 
+## Local Data Directory
+
+By default, new repositories store local configuration, state, caches, and logs under `.agent-badge/`. Directory resolution follows this order:
+
+1. `AGENT_BADGE_DIR`, when set
+2. an existing `.github/agent-badge/` directory
+3. an existing `.agent-badge/` directory
+4. `.agent-badge/` for a new setup
+
+For example, this initializes the repository under `.github/agent-badge/`:
+
+```bash
+AGENT_BADGE_DIR=.github/agent-badge agent-badge init
+```
+
+The configured path may be relative to the repository or absolute, but it must remain inside the repository. Once `.github/agent-badge/` exists, later commands discover it automatically. Other custom paths require `AGENT_BADGE_DIR` on every invocation, including hook-triggered refreshes.
+
+If both recognized directories exist and no override is set, `.github/agent-badge/` takes precedence. The managed `.gitignore` entries follow the resolved directory.
+
 ## Supported Keys
 
 Use `agent-badge config` or `agent-badge config get` to inspect current values, and `agent-badge config set <key> <value>` to change them.

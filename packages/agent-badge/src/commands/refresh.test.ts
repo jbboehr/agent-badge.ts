@@ -247,6 +247,7 @@ describe("runRefreshCommand", () => {
       expect(result.status).toBe("ok");
       expect(runIncrementalRefreshMock).toHaveBeenCalledWith({
         cwd: fixture.repoRoot,
+        agentBadgeDirectory: ".agent-badge",
         homeRoot: fixture.homeRoot,
         config: defaultAgentBadgeConfig,
         state: defaultAgentBadgeState,
@@ -268,6 +269,7 @@ describe("runRefreshCommand", () => {
       expect(output.read()).toContain("- Publish: not configured");
       expect(appendAgentBadgeLogMock).toHaveBeenCalledWith({
         cwd: fixture.repoRoot,
+        agentBadgeDirectory: ".agent-badge",
         entry: expect.objectContaining({
           operation: "refresh",
           status: "skipped",
@@ -1382,6 +1384,7 @@ describe("runRefreshCommand", () => {
       expect(output.read()).toContain("- Last successful badge update:");
       expect(appendAgentBadgeLogMock).toHaveBeenCalledWith({
         cwd: fixture.repoRoot,
+        agentBadgeDirectory: ".agent-badge",
         entry: expect.objectContaining({
           operation: "refresh",
           status: "failure",
@@ -1458,6 +1461,7 @@ describe("runRefreshCommand", () => {
       );
       expect(appendAgentBadgeLogMock).toHaveBeenCalledWith({
         cwd: fixture.repoRoot,
+        agentBadgeDirectory: ".agent-badge",
         entry: expect.objectContaining({
           operation: "refresh",
           status: "failure",

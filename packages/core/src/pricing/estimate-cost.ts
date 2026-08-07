@@ -8,6 +8,7 @@ import {
   findLatestCodexStateDatabase,
   loadCodexThreadRolloutRowsByIds
 } from "../providers/codex/codex-sql.js";
+import { resolveAgentBadgePaths } from "../repo/agent-badge-directory.js";
 
 export const PRICING_CACHE_FILE = ".agent-badge/cache/pricing.json";
 const PRICING_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
@@ -37,6 +38,7 @@ export interface PricingCatalog {
 
 export interface ResolvePricingCatalogOptions {
   readonly cwd: string;
+  readonly agentBadgeDirectory?: string;
   readonly now?: Date;
   readonly fetchImpl?: typeof fetch;
 }
@@ -355,11 +357,18 @@ async function fetchAnthropicPricingCatalog(
 
 async function readCachedPricingCatalog(
   cwd: string,
+  agentBadgeDirectory: string | undefined,
   now: Date
 ): Promise<PricingCatalog | null> {
   try {
+    const cachePath = resolveAgentBadgePaths({
+      cwd,
+      env: agentBadgeDirectory
+        ? { AGENT_BADGE_DIR: agentBadgeDirectory }
+        : undefined
+    }).pricingCachePath;
     const parsed = pricingCatalogSchema.parse(
-      JSON.parse(await readFile(join(cwd, PRICING_CACHE_FILE), "utf8"))
+      JSON.parse(await readFile(cachePath, "utf8"))
     );
 
     if (parsed.fetchedAt === null) {
@@ -378,9 +387,15 @@ async function readCachedPricingCatalog(
 
 async function writeCachedPricingCatalog(
   cwd: string,
+  agentBadgeDirectory: string | undefined,
   catalog: PricingCatalog
 ): Promise<void> {
-  const cachePath = join(cwd, PRICING_CACHE_FILE);
+  const cachePath = resolveAgentBadgePaths({
+    cwd,
+    env: agentBadgeDirectory
+      ? { AGENT_BADGE_DIR: agentBadgeDirectory }
+      : undefined
+  }).pricingCachePath;
 
   await mkdir(dirname(cachePath), { recursive: true });
   await writeFile(
@@ -392,10 +407,11 @@ async function writeCachedPricingCatalog(
 
 export async function resolvePricingCatalog({
   cwd,
+  agentBadgeDirectory,
   now = new Date(),
   fetchImpl = fetch
 }: ResolvePricingCatalogOptions): Promise<PricingCatalog> {
-  const cached = await readCachedPricingCatalog(cwd, now);
+  const cached = await readCachedPricingCatalog(cwd, agentBadgeDirectory, now);
 
   if (cached !== null) {
     return cached;
@@ -422,7 +438,7 @@ export async function resolvePricingCatalog({
   };
 
   if (catalog.fetchedAt !== null) {
-    await writeCachedPricingCatalog(cwd, catalog).catch(() => {
+    await writeCachedPricingCatalog(cwd, agentBadgeDirectory, catalog).catch(() => {
       // Pricing cache is a best-effort optimization.
     });
   }

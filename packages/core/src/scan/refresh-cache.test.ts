@@ -98,6 +98,28 @@ describe("refresh-cache", () => {
     });
   });
 
+  it("writes the cache under a configured agent-badge directory", async () => {
+    await withTempDir(async (cwd) => {
+      const agentBadgeDirectory = ".github/agent-badge";
+
+      await writeRefreshCache({
+        cwd,
+        agentBadgeDirectory,
+        cache: defaultRefreshCache
+      });
+
+      expect(
+        await readRefreshCache({ cwd, agentBadgeDirectory })
+      ).toEqual(defaultRefreshCache);
+      expect(
+        await readFile(
+          join(cwd, agentBadgeDirectory, "cache/session-index.json"),
+          "utf8"
+        )
+      ).toContain('"version": 2');
+    });
+  });
+
   it("preserves ambiguous session tokens for shared publish", () => {
     const session = createSession();
 

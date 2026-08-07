@@ -184,10 +184,10 @@ export function buildProgram(): Command {
     .command("uninstall")
     .description("Remove agent-badge runtime wiring and optionally purge local or remote state.")
     .option("--purge-remote", "Delete the configured publish gist and clear local gist association.")
-    .option("--purge-config", "Delete .agent-badge/config.json.")
-    .option("--purge-state", "Delete .agent-badge/state.json.")
-    .option("--purge-logs", "Delete .agent-badge/logs.")
-    .option("--purge-cache", "Delete .agent-badge/cache.")
+    .option("--purge-config", "Delete the resolved agent-badge config file.")
+    .option("--purge-state", "Delete the resolved agent-badge state file.")
+    .option("--purge-logs", "Delete the resolved agent-badge logs directory.")
+    .option("--purge-cache", "Delete the resolved agent-badge cache directory.")
     .option("--force", "Preserve progress by ignoring non-fatal artifact cleanup failures.")
     .action(
       async (options: {

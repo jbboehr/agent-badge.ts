@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { resolve } from "node:path";
 
 import {
   buildSharedRuntimeRemediation,
@@ -15,6 +15,7 @@ import {
   inspectSharedPublishHealth,
   inspectPublishReadiness,
   parseAgentBadgeState,
+  resolveAgentBadgePaths,
   type AgentBadgeState,
   type GitHubGistClient,
   type SharedRuntimeInspection,
@@ -64,9 +65,6 @@ export interface StatusCommandResult {
   readonly state: AgentBadgeState;
   readonly report: string;
 }
-
-const CONFIG_PATH = ".agent-badge/config.json";
-const STATE_PATH = ".agent-badge/state.json";
 
 function buildSharedIssueCounts(
   sharedHealth: SharedPublishHealthReport
@@ -168,7 +166,7 @@ async function readJsonFile(targetPath: string): Promise<unknown> {
 
 function asObject(value: unknown, label: string): Record<string, unknown> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new Error(`Invalid ${label} in ${CONFIG_PATH}.`);
+    throw new Error(`Invalid ${label} in the agent-badge configuration file.`);
   }
 
   return value as Record<string, unknown>;
@@ -187,7 +185,7 @@ function readBoolean(
     return fallback;
   }
 
-  throw new Error(`Invalid ${label} in ${CONFIG_PATH}.`);
+  throw new Error(`Invalid ${label} in the agent-badge configuration file.`);
 }
 
 function readNullableString(
@@ -207,7 +205,7 @@ function readNullableString(
     return fallback;
   }
 
-  throw new Error(`Invalid ${label} in ${CONFIG_PATH}.`);
+  throw new Error(`Invalid ${label} in the agent-badge configuration file.`);
 }
 
 function parseStatusCommandConfig(input: unknown): StatusCommandConfig {
@@ -380,10 +378,16 @@ export async function runStatusCommand(
   const cwd = resolve(options.cwd ?? process.cwd());
   const stdout = options.stdout ?? process.stdout;
   const gistClient = options.gistClient ?? createGitHubGistClient();
+  const agentBadgePaths = resolveAgentBadgePaths({
+    cwd,
+    env: options.runtimeEnv
+  });
   const config = parseStatusCommandConfig(
-    await readJsonFile(join(cwd, CONFIG_PATH))
+    await readJsonFile(agentBadgePaths.configPath)
   );
-  const state = parseAgentBadgeState(await readJsonFile(join(cwd, STATE_PATH)));
+  const state = parseAgentBadgeState(
+    await readJsonFile(agentBadgePaths.statePath)
+  );
   const runtime = inspectSharedRuntime(options.runtimeEnv ?? process.env);
   const trustReport = derivePublishTrustReport({
     state,

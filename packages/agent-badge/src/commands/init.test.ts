@@ -199,6 +199,63 @@ function createMutableGistClient(options: {
 }
 
 describe("runInitCommand", () => {
+  it("uses AGENT_BADGE_DIR for scaffold data and Git ignore wiring", async () => {
+    const repo = await createRepoFixture({
+      files: {
+        "package-lock.json": "{}"
+      }
+    });
+    const providers = await createProviderHome();
+    const output = createOutputCapture();
+    const gistClient = {
+      getGist: async () => {
+        throw new Error("get should not run");
+      },
+      createPublicGist: async () => {
+        throw new Error("simulated gist create failure");
+      },
+      updateGistFile: async () => {
+        throw new Error("update should not run");
+      }
+    };
+
+    try {
+      const result = await runInitCommand({
+        cwd: repo.root,
+        homeRoot: providers.root,
+        env: {
+          AGENT_BADGE_DIR: ".github/agent-badge",
+          GITHUB_TOKEN: "test-token"
+        },
+        runtimeEnv: { PATH: "" },
+        stdout: output.writer,
+        gistClient
+      });
+      const gitignoreContent = await readFile(
+        join(repo.root, ".gitignore"),
+        "utf8"
+      );
+
+      expect(result.preflight.agentBadgeDirectory).toBe(
+        ".github/agent-badge"
+      );
+      expect(
+        existsSync(join(repo.root, ".github/agent-badge/config.json"))
+      ).toBe(true);
+      expect(
+        existsSync(join(repo.root, ".github/agent-badge/state.json"))
+      ).toBe(true);
+      expect(existsSync(join(repo.root, ".agent-badge"))).toBe(false);
+      expect(gitignoreContent).toContain(
+        ".github/agent-badge/state.json"
+      );
+      expect(gitignoreContent).toContain(".github/agent-badge/cache/");
+      expect(gitignoreContent).toContain(".github/agent-badge/logs/");
+    } finally {
+      await Promise.all([repo.cleanup(), providers.cleanup()]);
+    }
+  });
+
   it("creates exactly one managed pre-push block by default", async () => {
     const repo = await createRepoFixture({
       files: {

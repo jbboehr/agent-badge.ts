@@ -1,5 +1,5 @@
 import { readFile, rm, writeFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { resolve } from "node:path";
 
 import {
   createGitHubGistClient,
@@ -8,6 +8,7 @@ import {
   parseAgentBadgeState,
   removeRepoLocalRuntimeWiring,
   resolveGitHubAuthToken,
+  resolveAgentBadgePaths,
   type GhCliTokenResolver,
   type AgentBadgeConfig,
   type AgentBadgeState,
@@ -40,11 +41,6 @@ export interface UninstallCommandResult {
   readonly runtimeWiring: RepoLocalRuntimeWiringResult;
   readonly remote: DeletePublishTargetResult | null;
 }
-
-const CONFIG_PATH = ".agent-badge/config.json";
-const STATE_PATH = ".agent-badge/state.json";
-const CACHE_PATH = ".agent-badge/cache";
-const LOGS_PATH = ".agent-badge/logs";
 
 function writeLine(stdout: OutputWriter, line: string): void {
   stdout.write(`${line}\n`);
@@ -184,10 +180,11 @@ export async function runUninstallCommand(
     reportLines
   });
 
-  const configPath = join(cwd, CONFIG_PATH);
-  const statePath = join(cwd, STATE_PATH);
-  const cachePath = join(cwd, CACHE_PATH);
-  const logsPath = join(cwd, LOGS_PATH);
+  const agentBadgePaths = resolveAgentBadgePaths({ cwd, env });
+  const configPath = agentBadgePaths.configPath;
+  const statePath = agentBadgePaths.statePath;
+  const cachePath = agentBadgePaths.cachePath;
+  const logsPath = agentBadgePaths.logsPath;
   const persistedConfig = await readOptionalConfig(configPath);
   const persistedState = await readOptionalState(statePath);
   let configForWrite = persistedConfig;

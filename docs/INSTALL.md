@@ -9,7 +9,7 @@ If your requirement is "works on the first try without debugging", use only the 
 There are only two setup actions to remember:
 
 - Once per machine: install the shared runtime so `agent-badge` is callable on `PATH`.
-- In each repo: run `npm init agent-badge@latest` to write `.agent-badge/*`, the managed `.gitignore` entries, the `pre-push` hook, and the README badge wiring.
+- In each repo: run `npm init agent-badge@latest` to write local agent-badge data (under `.agent-badge/*` by default), the managed `.gitignore` entries, the `pre-push` hook, and the README badge wiring.
 - Before live publishing: make GitHub auth available in the shell. That is machine or shell state, not repo-owned setup.
 
 ## Requirements

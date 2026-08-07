@@ -39,6 +39,7 @@ import type { GhCliTokenResolver } from "../init/github-auth.js";
 import { runInitPreflight, type InitPreflightResult } from "../init/preflight.js";
 import { buildSharedRuntimeRemediation } from "../runtime/shared-cli.js";
 import { parseAgentBadgeState, type AgentBadgeState } from "../state/state-schema.js";
+import { resolveAgentBadgePaths } from "../repo/agent-badge-directory.js";
 
 export type DoctorCheckStatus = "pass" | "warn" | "fail";
 
@@ -82,8 +83,6 @@ type ParseOutcome<T> = {
   readonly missing: boolean;
 };
 
-const CONFIG_PATH = ".agent-badge/config.json";
-const STATE_PATH = ".agent-badge/state.json";
 const PRE_PUSH_HOOK_PATH = ".git/hooks/pre-push";
 const CHECK_IDS = [
   "git",
@@ -176,12 +175,11 @@ async function readJsonFile<T>(path: string): Promise<ParseOutcome<T>> {
   }
 }
 
-async function readPersistedConfig(cwd: string): Promise<{
+async function readPersistedConfig(configPath: string): Promise<{
   readonly config: AgentBadgeConfig | null;
   readonly configMissing: boolean;
   readonly configInvalid: boolean;
 }> {
-  const configPath = join(cwd, CONFIG_PATH);
   const rawConfig = await readJsonFile<unknown>(configPath);
   let parsedConfig: AgentBadgeConfig | null = null;
   let configInvalid = false;
@@ -201,12 +199,11 @@ async function readPersistedConfig(cwd: string): Promise<{
   };
 }
 
-async function readPersistedState(cwd: string): Promise<{
+async function readPersistedState(statePath: string): Promise<{
   readonly state: AgentBadgeState | null;
   readonly stateMissing: boolean;
   readonly stateInvalid: boolean;
 }> {
-  const statePath = join(cwd, STATE_PATH);
   const rawState = await readJsonFile<unknown>(statePath);
   let parsedState: AgentBadgeState | null = null;
   let stateInvalid = false;
@@ -387,7 +384,7 @@ function checkPublishTrust(options: {
       id: "publish-trust",
       status: "warn",
       message: "Live badge trust could not be inspected",
-      detail: "No valid .agent-badge/state.json was found.",
+      detail: "No valid agent-badge state file was found.",
       fix: buildFix(["Run `agent-badge init` to recreate persisted state."])
     };
   }
@@ -397,7 +394,7 @@ function checkPublishTrust(options: {
       id: "publish-trust",
       status: "warn",
       message: "Live badge trust could not be inspected",
-      detail: "Live badge trust requires a valid .agent-badge/state.json file.",
+      detail: "Live badge trust requires a valid agent-badge state file.",
       fix: buildFix(["Run `agent-badge init` to repair persisted state."])
     };
   }
@@ -502,7 +499,7 @@ async function checkPublishWrite(options: {
       id: "publish-write",
       status: "fail",
       message: "Publish configuration is missing",
-      detail: "No valid .agent-badge/config.json was found.",
+      detail: "No valid agent-badge configuration file was found.",
       fix: buildFix(["Run `agent-badge init` to create publish configuration."])
     };
   }
@@ -729,7 +726,7 @@ async function inspectSharedPublishState(options: {
   if (options.configMissing) {
     return {
       report: null,
-      detail: "No valid .agent-badge/config.json was found.",
+      detail: "No valid agent-badge configuration file was found.",
       fix: buildFix(["Run `agent-badge init` to create publish configuration."])
     };
   }
@@ -737,7 +734,7 @@ async function inspectSharedPublishState(options: {
   if (options.configInvalid || options.config === null) {
     return {
       report: null,
-      detail: "Shared publish inspection requires a valid .agent-badge/config.json file.",
+      detail: "Shared publish inspection requires a valid agent-badge configuration file.",
       fix: buildFix(["Run `agent-badge init` to repair publish configuration."])
     };
   }
@@ -745,7 +742,7 @@ async function inspectSharedPublishState(options: {
   if (options.stateMissing) {
     return {
       report: null,
-      detail: "No valid .agent-badge/state.json was found.",
+      detail: "No valid agent-badge state file was found.",
       fix: buildFix(["Run `agent-badge init` to recreate persisted state."])
     };
   }
@@ -753,7 +750,7 @@ async function inspectSharedPublishState(options: {
   if (options.stateInvalid || options.state === null) {
     return {
       report: null,
-      detail: "Shared publish inspection requires a valid .agent-badge/state.json file.",
+      detail: "Shared publish inspection requires a valid agent-badge state file.",
       fix: buildFix(["Run `agent-badge init` to repair persisted state."])
     };
   }
@@ -1164,8 +1161,12 @@ export async function runDoctorChecks(
     env: options.env,
     ghCliTokenResolver: options.ghCliTokenResolver
   });
-  const persisted = await readPersistedConfig(cwd);
-  const persistedState = await readPersistedState(cwd);
+  const agentBadgePaths = resolveAgentBadgePaths({
+    cwd,
+    env: options.env
+  });
+  const persisted = await readPersistedConfig(agentBadgePaths.configPath);
+  const persistedState = await readPersistedState(agentBadgePaths.statePath);
   const resolvedAuth = await resolveGitHubAuthToken({
     env: options.env,
     ghCliTokenResolver: options.ghCliTokenResolver

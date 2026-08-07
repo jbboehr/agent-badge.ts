@@ -73,6 +73,33 @@ async function createGitRepoFixture(options: {
 }
 
 describe("applyMinimalRepoScaffold", () => {
+  it("writes Git ignore entries for the resolved agent-badge directory", async () => {
+    const repo = await createGitRepoFixture();
+
+    try {
+      await applyMinimalRepoScaffold({
+        cwd: repo.root,
+        agentBadgeDirectory: ".github/agent-badge",
+        packageManager: "npm",
+        refresh: failSoftRefresh
+      });
+
+      const gitignoreContent = await readFile(
+        join(repo.root, ".gitignore"),
+        "utf8"
+      );
+
+      expect(gitignoreContent).toContain(
+        ".github/agent-badge/state.json"
+      );
+      expect(gitignoreContent).toContain(".github/agent-badge/cache/");
+      expect(gitignoreContent).toContain(".github/agent-badge/logs/");
+      expect(gitignoreContent).not.toContain(".agent-badge/state.json");
+    } finally {
+      await repo.cleanup();
+    }
+  });
+
   it(
     "creates repo-owned scaffold and a runnable first-run pre-push hook without creating package.json",
     async () => {

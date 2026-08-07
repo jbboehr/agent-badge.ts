@@ -340,6 +340,7 @@ describe.sequential("runScanCommand", () => {
       expect(output.read()).toContain("Included Totals");
       expect(appendAgentBadgeLogMock).toHaveBeenCalledWith({
         cwd: fixture.repo.root,
+        agentBadgeDirectory: ".agent-badge",
         entry: expect.objectContaining({
           operation: "scan",
           status: "success",
@@ -486,6 +487,7 @@ describe.sequential("runScanCommand", () => {
       expect(await readFile(fixture.statePath, "utf8")).toBe(before);
       expect(appendAgentBadgeLogMock).toHaveBeenCalledWith({
         cwd: fixture.repo.root,
+        agentBadgeDirectory: ".agent-badge",
         entry: expect.objectContaining({
           operation: "scan",
           status: "failure",

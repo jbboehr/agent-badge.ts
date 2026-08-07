@@ -21,6 +21,7 @@ import {
   detectPackageManager,
   type PackageManager
 } from "../runtime/package-manager.js";
+import { resolveAgentBadgePaths } from "../repo/agent-badge-directory.js";
 
 export interface ExistingScaffoldStatus {
   readonly exists: boolean;
@@ -42,6 +43,7 @@ export interface InitPackageManagerStatus {
 
 export interface InitPreflightResult {
   readonly cwd: string;
+  readonly agentBadgeDirectory: string;
   readonly git: GitContext;
   readonly readme: InitReadmeStatus;
   readonly packageManager: InitPackageManagerStatus;
@@ -90,8 +92,11 @@ async function getReadmeStatus(cwd: string): Promise<InitReadmeStatus> {
   };
 }
 
-function getExistingScaffoldStatus(cwd: string): ExistingScaffoldStatus {
-  const scaffoldRoot = join(cwd, ".agent-badge");
+function getExistingScaffoldStatus(
+  cwd: string,
+  agentBadgeDirectory: string
+): ExistingScaffoldStatus {
+  const scaffoldRoot = join(cwd, agentBadgeDirectory);
   const root = existsSync(scaffoldRoot);
 
   return {
@@ -108,6 +113,10 @@ export async function runInitPreflight(
   options: RunInitPreflightOptions = {}
 ): Promise<InitPreflightResult> {
   const cwd = options.cwd ?? process.cwd();
+  const agentBadgeDirectory = resolveAgentBadgePaths({
+    cwd,
+    env: options.env
+  }).directory;
   const [git, readme, githubAuth] = await Promise.all([
     getGitContext({ cwd, allowGitInit: options.allowGitInit }),
     getReadmeStatus(cwd),
@@ -120,6 +129,7 @@ export async function runInitPreflight(
 
   return {
     cwd,
+    agentBadgeDirectory,
     git,
     readme,
     packageManager: {
@@ -129,6 +139,6 @@ export async function runInitPreflight(
       homeRoot: options.homeRoot
     }),
     githubAuth,
-    existingScaffold: getExistingScaffoldStatus(cwd)
+    existingScaffold: getExistingScaffoldStatus(cwd, agentBadgeDirectory)
   };
 }

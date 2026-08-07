@@ -76,6 +76,41 @@ async function readJson(targetPath: string): Promise<unknown> {
 }
 
 describe("applyAgentBadgeScaffold", () => {
+  it("creates scaffold files in AGENT_BADGE_DIR", async () => {
+    const repo = await createRepoFixture();
+    const providers = await createProviderHome();
+
+    try {
+      const preflight = await runInitPreflight({
+        cwd: repo.root,
+        homeRoot: providers.root,
+        env: { AGENT_BADGE_DIR: ".github/agent-badge" }
+      });
+      const result = await applyAgentBadgeScaffold({
+        cwd: repo.root,
+        preflight,
+        now: () => new Date(initializedAt)
+      });
+
+      expect(preflight.agentBadgeDirectory).toBe(".github/agent-badge");
+      expect(result.created).toEqual(
+        expect.arrayContaining([
+          ".github/agent-badge",
+          ".github/agent-badge/cache",
+          ".github/agent-badge/logs",
+          ".github/agent-badge/config.json",
+          ".github/agent-badge/state.json"
+        ])
+      );
+      expect(
+        existsSync(join(repo.root, ".github/agent-badge/config.json"))
+      ).toBe(true);
+      expect(existsSync(join(repo.root, ".agent-badge"))).toBe(false);
+    } finally {
+      await Promise.all([repo.cleanup(), providers.cleanup()]);
+    }
+  });
+
   it("creates .agent-badge/config.json, .agent-badge/state.json, .agent-badge/cache, and .agent-badge/logs on first run", async () => {
     const repo = await createRepoFixture();
     const providers = await createProviderHome({

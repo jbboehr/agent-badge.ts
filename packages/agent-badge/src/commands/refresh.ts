@@ -1,6 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { join, resolve } from "node:path";
+import { resolve } from "node:path";
 
 import {
   applyPublishAttemptFailure,
@@ -21,6 +21,7 @@ import {
   parseAgentBadgeState,
   publishBadgeIfChanged,
   resolveGitHubAuthToken,
+  resolveAgentBadgePaths,
   runIncrementalRefresh,
   toPublishAttemptChangedBadge,
   writeRefreshCache,
@@ -80,8 +81,6 @@ export type RefreshCommandResult =
   | RefreshCommandSuccessResult
   | RefreshCommandSoftFailureResult;
 
-const CONFIG_PATH = ".agent-badge/config.json";
-const STATE_PATH = ".agent-badge/state.json";
 const GITHUB_AUTH_MISSING_ERROR_MESSAGE =
   "GitHub authentication missing or invalid.";
 
@@ -475,8 +474,9 @@ export async function runRefreshCommand(
   const stdout = options.stdout ?? process.stdout;
   const env = options.env ?? process.env;
   const startAtMs = Date.now();
-  const configPath = join(cwd, CONFIG_PATH);
-  const statePath = join(cwd, STATE_PATH);
+  const agentBadgePaths = resolveAgentBadgePaths({ cwd, env });
+  const configPath = agentBadgePaths.configPath;
+  const statePath = agentBadgePaths.statePath;
   let persistedState: AgentBadgeState | null = null;
   let config: ReturnType<typeof parseAgentBadgeConfig> | null = null;
   let attemptedPublish = false;
@@ -487,6 +487,7 @@ export async function runRefreshCommand(
     const previousState = parseAgentBadgeState(await readJsonFile(statePath));
     const refresh = await runIncrementalRefresh({
       cwd,
+      agentBadgeDirectory: agentBadgePaths.directory,
       homeRoot,
       config,
       state: previousState,
@@ -500,9 +501,13 @@ export async function runRefreshCommand(
       now
     });
 
-    // Persist the derived .agent-badge/cache/session-index.json cache before remote work.
+    // Persist the derived session cache before remote work.
     await Promise.all([
-      writeRefreshCache({ cwd, cache: refresh.cache }),
+      writeRefreshCache({
+        cwd,
+        agentBadgeDirectory: agentBadgePaths.directory,
+        cache: refresh.cache
+      }),
       writeStateFile(statePath, persistedState)
     ]);
 
@@ -583,6 +588,7 @@ export async function runRefreshCommand(
     );
     await appendAgentBadgeLog({
       cwd,
+      agentBadgeDirectory: agentBadgePaths.directory,
       entry: buildLogEntry({
         operation: "refresh",
         status:
@@ -670,6 +676,7 @@ export async function runRefreshCommand(
     if (!failSoft) {
       await appendAgentBadgeLog({
         cwd,
+        agentBadgeDirectory: agentBadgePaths.directory,
         entry: buildLogEntry({
           operation: "refresh",
           status: "failure",
@@ -690,6 +697,7 @@ export async function runRefreshCommand(
     printSoftFailure(stdout, refreshError, persistedState, config, hookPolicy);
     await appendAgentBadgeLog({
       cwd,
+      agentBadgeDirectory: agentBadgePaths.directory,
       entry: buildLogEntry({
         operation: "refresh",
         status: "failure",

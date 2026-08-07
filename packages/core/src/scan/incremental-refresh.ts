@@ -44,6 +44,7 @@ interface ProviderIncrementalResult {
 
 export interface RunIncrementalRefreshOptions {
   readonly cwd: string;
+  readonly agentBadgeDirectory?: string;
   readonly homeRoot: string;
   readonly config: Pick<AgentBadgeConfig, "providers" | "repo" | "badge">;
   readonly state: AgentBadgeState;
@@ -125,7 +126,7 @@ async function mergeAttributedSessionsIntoCache(
   attributedSessions: readonly AttributedSession[],
   options: Pick<
     RunIncrementalRefreshOptions,
-    "cwd" | "homeRoot" | "config" | "state"
+    "cwd" | "agentBadgeDirectory" | "homeRoot" | "config" | "state"
   >
 ): Promise<RefreshCache> {
   const shouldEstimateCost =
@@ -139,7 +140,10 @@ async function mergeAttributedSessionsIntoCache(
     : new Map<string, number>();
 
   if (shouldEstimateCost && observationSessions.length > 0) {
-    const pricingCatalog = await resolvePricingCatalog({ cwd: options.cwd });
+    const pricingCatalog = await resolvePricingCatalog({
+      cwd: options.cwd,
+      agentBadgeDirectory: options.agentBadgeDirectory
+    });
     const estimatedCosts = await estimateSessionCostsUsdMicrosByKey({
       sessions: observationSessions,
       homeRoot: options.homeRoot,
@@ -300,7 +304,10 @@ export async function runIncrementalRefresh(
   let cache: RefreshCache | null;
 
   try {
-    cache = await readRefreshCache({ cwd: options.cwd });
+    cache = await readRefreshCache({
+      cwd: options.cwd,
+      agentBadgeDirectory: options.agentBadgeDirectory
+    });
   } catch {
     return runFullRefresh(options, providers);
   }

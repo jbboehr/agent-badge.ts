@@ -162,7 +162,8 @@ async function writeJsonFile(targetPath: string, value: unknown): Promise<void> 
 
 function reconcileConfig(
   rawConfig: unknown | typeof invalidJsonMarker,
-  defaults: AgentBadgeConfig
+  defaults: AgentBadgeConfig,
+  configPathLabel: string
 ): { value: AgentBadgeConfig; changed: boolean; warning?: string } {
   if (rawConfig === undefined) {
     return {
@@ -175,8 +176,7 @@ function reconcileConfig(
     return {
       value: defaults,
       changed: true,
-      warning:
-        "Reset .agent-badge/config.json because it contained invalid JSON."
+      warning: `Reset ${configPathLabel} because it contained invalid JSON.`
     };
   }
 
@@ -190,8 +190,7 @@ function reconcileConfig(
       return {
         value: defaults,
         changed: true,
-        warning:
-          "Reset .agent-badge/config.json because it was not a valid JSON object."
+        warning: `Reset ${configPathLabel} because it was not a valid JSON object.`
       };
     }
 
@@ -268,8 +267,7 @@ function reconcileConfig(
         }
       }),
       changed: true,
-      warning:
-        "Reconciled .agent-badge/config.json with schema defaults while preserving valid values."
+      warning: `Reconciled ${configPathLabel} with schema defaults while preserving valid values.`
     };
   }
 }
@@ -303,7 +301,8 @@ function reconcileCheckpoint(
 
 function reconcileState(
   rawState: unknown | typeof invalidJsonMarker,
-  defaults: AgentBadgeState
+  defaults: AgentBadgeState,
+  statePathLabel: string
 ): { value: AgentBadgeState; changed: boolean; warning?: string } {
   let parsedExisting: AgentBadgeState | null = null;
 
@@ -326,8 +325,7 @@ function reconcileState(
     return {
       value: defaults,
       changed: true,
-      warning:
-        "Reset .agent-badge/state.json because it contained invalid JSON."
+      warning: `Reset ${statePathLabel} because it contained invalid JSON.`
     };
   }
 
@@ -438,8 +436,7 @@ function reconcileState(
     return {
       value,
       changed: true,
-      warning:
-        "Reconciled .agent-badge/state.json with scaffold defaults while preserving valid values."
+      warning: `Reconciled ${statePathLabel} with scaffold defaults while preserving valid values.`
     };
   }
 
@@ -448,7 +445,7 @@ function reconcileState(
     changed: !jsonEquals(parsedExisting, value),
     warning: jsonEquals(parsedExisting, value)
       ? undefined
-      : "Reconciled .agent-badge/state.json with scaffold defaults while preserving valid values."
+      : `Reconciled ${statePathLabel} with scaffold defaults while preserving valid values.`
   };
 }
 
@@ -468,19 +465,20 @@ async function ensureDirectory(
 
 async function ensureConfigFile(
   targetPath: string,
+  pathLabel: string,
   defaults: AgentBadgeConfig,
   result: AgentBadgeScaffoldResult
 ): Promise<void> {
   const rawConfig = await readJsonFile(targetPath);
-  const reconciled = reconcileConfig(rawConfig, defaults);
+  const reconciled = reconcileConfig(rawConfig, defaults, pathLabel);
 
   if (rawConfig !== undefined && !reconciled.changed) {
-    result.reused.push(".agent-badge/config.json");
+    result.reused.push(pathLabel);
     return;
   }
 
   await writeJsonFile(targetPath, reconciled.value);
-  result.created.push(".agent-badge/config.json");
+  result.created.push(pathLabel);
 
   if (reconciled.warning) {
     result.warnings.push(reconciled.warning);
@@ -489,19 +487,20 @@ async function ensureConfigFile(
 
 async function ensureStateFile(
   targetPath: string,
+  pathLabel: string,
   defaults: AgentBadgeState,
   result: AgentBadgeScaffoldResult
 ): Promise<void> {
   const rawState = await readJsonFile(targetPath);
-  const reconciled = reconcileState(rawState, defaults);
+  const reconciled = reconcileState(rawState, defaults, pathLabel);
 
   if (rawState !== undefined && !reconciled.changed) {
-    result.reused.push(".agent-badge/state.json");
+    result.reused.push(pathLabel);
     return;
   }
 
   await writeJsonFile(targetPath, reconciled.value);
-  result.created.push(".agent-badge/state.json");
+  result.created.push(pathLabel);
 
   if (reconciled.warning) {
     result.warnings.push(reconciled.warning);
@@ -516,15 +515,27 @@ export async function applyAgentBadgeScaffold(
     reused: [],
     warnings: []
   };
-  const scaffoldRoot = join(options.cwd, ".agent-badge");
+  const agentBadgeDirectory = options.preflight.agentBadgeDirectory;
+  const scaffoldRoot = join(options.cwd, agentBadgeDirectory);
+  const configPathLabel = `${agentBadgeDirectory}/config.json`;
+  const statePathLabel = `${agentBadgeDirectory}/state.json`;
   const initializedAt = (options.now ?? (() => new Date()))().toISOString();
 
-  await ensureDirectory(scaffoldRoot, ".agent-badge", result);
-  await ensureDirectory(join(scaffoldRoot, "cache"), ".agent-badge/cache", result);
-  await ensureDirectory(join(scaffoldRoot, "logs"), ".agent-badge/logs", result);
+  await ensureDirectory(scaffoldRoot, agentBadgeDirectory, result);
+  await ensureDirectory(
+    join(scaffoldRoot, "cache"),
+    `${agentBadgeDirectory}/cache`,
+    result
+  );
+  await ensureDirectory(
+    join(scaffoldRoot, "logs"),
+    `${agentBadgeDirectory}/logs`,
+    result
+  );
 
   await ensureConfigFile(
     join(scaffoldRoot, "config.json"),
+    configPathLabel,
     createDefaultAgentBadgeConfig({
       providers: options.preflight.providers
     }),
@@ -532,6 +543,7 @@ export async function applyAgentBadgeScaffold(
   );
   await ensureStateFile(
     join(scaffoldRoot, "state.json"),
+    statePathLabel,
     createDefaultAgentBadgeState({
       initialized: true,
       scaffoldVersion,

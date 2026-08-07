@@ -6,6 +6,7 @@ import {
   type AgentBadgeLogEntry,
   type AgentBadgeLogStatus
 } from "./log-entry.js";
+import { resolveAgentBadgePaths } from "../repo/agent-badge-directory.js";
 
 export const AGENT_BADGE_LOG_DIR = ".agent-badge/logs";
 export const AGENT_BADGE_LOG_MAX_FILES = 7;
@@ -41,8 +42,14 @@ export function buildLogEntry(
 
 export async function listAgentBadgeLogFiles(options: {
   readonly cwd: string;
+  readonly agentBadgeDirectory?: string;
 }): Promise<string[]> {
-  const logsRoot = join(options.cwd, AGENT_BADGE_LOG_DIR);
+  const logsRoot = resolveAgentBadgePaths({
+    cwd: options.cwd,
+    env: options.agentBadgeDirectory
+      ? { AGENT_BADGE_DIR: options.agentBadgeDirectory }
+      : undefined
+  }).logsPath;
 
   try {
     const files = await readdir(logsRoot);
@@ -55,10 +62,14 @@ export async function listAgentBadgeLogFiles(options: {
 
 export async function rotateLogFiles(options: {
   readonly cwd: string;
+  readonly agentBadgeDirectory?: string;
   readonly maxFiles?: number;
 }): Promise<void> {
   const maxFiles = options.maxFiles ?? AGENT_BADGE_LOG_MAX_FILES;
-  const files = await listAgentBadgeLogFiles({ cwd: options.cwd });
+  const files = await listAgentBadgeLogFiles({
+    cwd: options.cwd,
+    agentBadgeDirectory: options.agentBadgeDirectory
+  });
 
   if (files.length <= maxFiles) {
     return;
@@ -86,17 +97,26 @@ export async function rotateLogFiles(options: {
 
 export async function appendAgentBadgeLog(options: {
   readonly cwd: string;
+  readonly agentBadgeDirectory?: string;
   readonly entry: AgentBadgeLogEntry;
 }): Promise<string> {
   const parsedEntry = agentBadgeLogEntrySchema.parse(options.entry);
-  const logsRoot = join(options.cwd, AGENT_BADGE_LOG_DIR);
+  const logsRoot = resolveAgentBadgePaths({
+    cwd: options.cwd,
+    env: options.agentBadgeDirectory
+      ? { AGENT_BADGE_DIR: options.agentBadgeDirectory }
+      : undefined
+  }).logsPath;
 
   await mkdir(logsRoot, { recursive: true });
 
   const logPath = join(logsRoot, `agent-badge-${formatLogDate()}.jsonl`);
   await appendFile(logPath, toJsonLine(parsedEntry), "utf8");
 
-  await rotateLogFiles({ cwd: options.cwd });
+  await rotateLogFiles({
+    cwd: options.cwd,
+    agentBadgeDirectory: options.agentBadgeDirectory
+  });
 
   return logPath;
 }

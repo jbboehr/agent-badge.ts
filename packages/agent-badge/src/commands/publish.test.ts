@@ -433,6 +433,7 @@ describe("runPublishCommand", () => {
       expect(result.state.publish.mode).toBe("shared");
       expect(appendAgentBadgeLogMock).toHaveBeenCalledWith({
         cwd: fixture.repoRoot,
+        agentBadgeDirectory: ".agent-badge",
         entry: expect.objectContaining({
           operation: "publish",
           status: "success",
@@ -691,6 +692,7 @@ describe("runPublishCommand", () => {
       expect(publishBadgeToGistMock).not.toHaveBeenCalled();
       expect(appendAgentBadgeLogMock).toHaveBeenCalledWith({
         cwd: fixture.repoRoot,
+        agentBadgeDirectory: ".agent-badge",
         entry: expect.objectContaining({
           operation: "publish",
           status: "failure",

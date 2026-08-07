@@ -1,10 +1,11 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname } from "node:path";
 
 import { z } from "zod";
 
 import type { AttributionStatus } from "../attribution/attribution-types.js";
 import type { NormalizedSessionSummary } from "../providers/session-summary.js";
+import { resolveAgentBadgePaths } from "../repo/agent-badge-directory.js";
 
 export const REFRESH_CACHE_FILE = ".agent-badge/cache/session-index.json";
 
@@ -38,11 +39,25 @@ export type RefreshCache = z.infer<typeof refreshCacheSchema>;
 
 export interface ReadRefreshCacheOptions {
   readonly cwd: string;
+  readonly agentBadgeDirectory?: string;
 }
 
 export interface WriteRefreshCacheOptions {
   readonly cwd: string;
+  readonly agentBadgeDirectory?: string;
   readonly cache: RefreshCache;
+}
+
+function getRefreshCachePath(
+  cwd: string,
+  agentBadgeDirectory?: string
+): string {
+  return resolveAgentBadgePaths({
+    cwd,
+    env: agentBadgeDirectory
+      ? { AGENT_BADGE_DIR: agentBadgeDirectory }
+      : undefined
+  }).refreshCachePath;
 }
 
 export interface BuildRefreshCacheEntryOptions {
@@ -86,10 +101,14 @@ export function buildRefreshCacheEntry({
 }
 
 export async function readRefreshCache({
-  cwd
+  cwd,
+  agentBadgeDirectory
 }: ReadRefreshCacheOptions): Promise<RefreshCache | null> {
   try {
-    const content = await readFile(join(cwd, REFRESH_CACHE_FILE), "utf8");
+    const content = await readFile(
+      getRefreshCachePath(cwd, agentBadgeDirectory),
+      "utf8"
+    );
 
     return refreshCacheSchema.parse(JSON.parse(content));
   } catch (error) {
@@ -108,9 +127,10 @@ export async function readRefreshCache({
 
 export async function writeRefreshCache({
   cwd,
+  agentBadgeDirectory,
   cache
 }: WriteRefreshCacheOptions): Promise<void> {
-  const cachePath = join(cwd, REFRESH_CACHE_FILE);
+  const cachePath = getRefreshCachePath(cwd, agentBadgeDirectory);
 
   await mkdir(dirname(cachePath), { recursive: true });
   await writeFile(

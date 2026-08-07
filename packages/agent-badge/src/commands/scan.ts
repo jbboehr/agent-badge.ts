@@ -1,6 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { join, resolve } from "node:path";
+import { resolve } from "node:path";
 
 import {
   applyAmbiguousSessionDecision,
@@ -10,6 +10,7 @@ import {
   formatScanReport,
   parseAgentBadgeConfig,
   parseAgentBadgeState,
+  resolveAgentBadgePaths,
   runFullBackfillScan,
   appendAgentBadgeLog,
   buildLogEntry,
@@ -25,6 +26,7 @@ interface OutputWriter {
 
 export interface RunScanCommandOptions {
   readonly cwd?: string;
+  readonly env?: NodeJS.ProcessEnv;
   readonly homeRoot?: string;
   readonly stdout?: OutputWriter;
   readonly includeSession?: string[];
@@ -39,9 +41,6 @@ export interface ScanCommandResult {
   readonly warnings: readonly string[];
   readonly report: string;
 }
-
-const CONFIG_PATH = ".agent-badge/config.json";
-const STATE_PATH = ".agent-badge/state.json";
 
 async function readJsonFile(targetPath: string): Promise<unknown> {
   let rawContent: string;
@@ -153,8 +152,12 @@ export async function runScanCommand(
   const homeRoot = resolve(options.homeRoot ?? homedir());
   const stdout = options.stdout ?? process.stdout;
   const startAtMs = Date.now();
-  const configPath = join(cwd, CONFIG_PATH);
-  const statePath = join(cwd, STATE_PATH);
+  const agentBadgePaths = resolveAgentBadgePaths({
+    cwd,
+    env: options.env
+  });
+  const configPath = agentBadgePaths.configPath;
+  const statePath = agentBadgePaths.statePath;
 
   try {
     const config = parseAgentBadgeConfig(await readJsonFile(configPath));
@@ -203,6 +206,7 @@ export async function runScanCommand(
 
     await appendAgentBadgeLog({
       cwd,
+      agentBadgeDirectory: agentBadgePaths.directory,
       entry: buildLogEntry({
         operation: "scan",
         status: "success",
@@ -229,6 +233,7 @@ export async function runScanCommand(
   } catch (error) {
     await appendAgentBadgeLog({
       cwd,
+      agentBadgeDirectory: agentBadgePaths.directory,
       entry: buildLogEntry({
         operation: "scan",
         status: "failure",

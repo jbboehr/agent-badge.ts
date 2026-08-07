@@ -1,5 +1,5 @@
 import { readFile, writeFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { resolve } from "node:path";
 
 import {
   applyMinimalRepoScaffold,
@@ -7,6 +7,7 @@ import {
   buildSharedRuntimeRemediation,
   inspectSharedRuntime,
   parseAgentBadgeConfig,
+  resolveAgentBadgePaths,
   type AgentBadgeBadgeMode,
   type AgentBadgeConfig,
   type AgentBadgePrivacyOutput,
@@ -51,7 +52,6 @@ export interface ConfigCommandResult {
   readonly report: string;
 }
 
-const CONFIG_PATH = ".agent-badge/config.json";
 const PRIVACY_AGGREGATE_ONLY_ERROR =
   "privacy.aggregateOnly must remain true because agent-badge only publishes aggregate data.";
 const supportedConfigKeys = [
@@ -444,7 +444,11 @@ export async function runConfigCommand(
   const cwd = resolve(options.cwd ?? process.cwd());
   const stdout = options.stdout ?? process.stdout;
   const action = options.action ?? "get";
-  const configPath = join(cwd, CONFIG_PATH);
+  const agentBadgePaths = resolveAgentBadgePaths({
+    cwd,
+    env: options.runtimeEnv
+  });
+  const configPath = agentBadgePaths.configPath;
   const config = parseAgentBadgeConfig(await readJsonFile(configPath));
   const runtime = inspectSharedRuntime(options.runtimeEnv ?? process.env);
 
@@ -495,6 +499,7 @@ export async function runConfigCommand(
     try {
       await applyMinimalRepoScaffold({
         cwd,
+        agentBadgeDirectory: agentBadgePaths.directory,
         // The shared hook contract is package-manager agnostic after Phase 25.
         packageManager: "npm",
         refresh: nextConfig.refresh
