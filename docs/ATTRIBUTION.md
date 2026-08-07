@@ -6,7 +6,7 @@
 
 The attribution engine applies evidence in this strict order:
 
-`exact repo root -> exact remote -> normalized cwd -> transcript correlation -> persisted override`
+`exact repo root -> exact remote -> normalized cwd -> transcript correlation -> persisted include override`
 
 The important part is not the number of signals. It is the order. Strong evidence gets first say. Weak hints do not get to inflate the badge.
 
@@ -30,15 +30,17 @@ agent-badge scan --include-session <provider:sessionId>
 agent-badge scan --exclude-session <provider:sessionId>
 ```
 
-`--include-session` accepts ambiguous or excluded sessions. `--exclude-session`
-accepts ambiguous sessions. Those decisions are persisted and reused on future
-scans and refreshes.
+`--include-session` accepts ambiguous or excluded sessions and stores the include
+override in the resolved `state.json`. Later scans and refreshes reuse it.
+`--exclude-session` removes that persisted include override, returning the
+session to normal evidence-based attribution.
 
 ## Why This Matters
 
 - Strong signals are preferred over weak hints.
 - Ambiguous sessions are never auto-counted.
-- Manual include/exclude decisions are persisted and reused on future scans.
+- Manual include decisions are persisted and reused on future scans.
+- Removing an include decision also invalidates any stale cached decision.
 - Excluded sessions can only enter the totals through an explicit include override.
 
 The badge is allowed to undercount. It is not allowed to bluff.

@@ -90,6 +90,17 @@ function filterCacheByEnabledProviders(
   };
 }
 
+function cacheOverrideDecisionsMatchState(
+  cache: RefreshCache,
+  state: Pick<AgentBadgeState, "overrides">
+): boolean {
+  return Object.entries(cache.entries).every(
+    ([sessionKey, entry]) =>
+      entry.overrideDecision ===
+      (state.overrides.ambiguousSessions[sessionKey] ?? null)
+  );
+}
+
 function summarizeRefreshCache(cache: RefreshCache): AgentBadgeRefreshSummary {
   const entries = Object.values(cache.entries);
   const hasEstimatedCost = entries.some(
@@ -313,6 +324,10 @@ export async function runIncrementalRefresh(
   }
 
   if (cache === null) {
+    return runFullRefresh(options, providers);
+  }
+
+  if (!cacheOverrideDecisionsMatchState(cache, options.state)) {
     return runFullRefresh(options, providers);
   }
 

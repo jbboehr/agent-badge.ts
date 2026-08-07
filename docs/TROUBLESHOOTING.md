@@ -89,8 +89,9 @@ Symptom: a session you expected to count shows up as ambiguous in `agent-badge s
 Recovery:
 
 1. Review the ambiguous session ids in the scan output.
-2. Re-run the scan with `--include-session <provider:sessionId>` or `--exclude-session <provider:sessionId>`.
-3. Re-run `agent-badge refresh` after resolving the ambiguity if you want the badge updated.
+2. Re-run the scan with `--include-session <provider:sessionId>`.
+3. To undo that choice later, run `agent-badge scan --exclude-session <provider:sessionId>`.
+4. Re-run `agent-badge refresh` after changing the override if you want the badge updated.
 
 ## badge looks stale after a push
 

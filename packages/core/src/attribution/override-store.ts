@@ -35,3 +35,22 @@ export function applyAmbiguousSessionDecision(
     }
   };
 }
+
+export function removeAmbiguousSessionDecision(
+  state: AgentBadgeState,
+  sessionKey: string
+): AgentBadgeState {
+  const ambiguousSessions = {
+    ...state.overrides.ambiguousSessions
+  };
+
+  delete ambiguousSessions[sessionKey];
+
+  return {
+    ...state,
+    overrides: {
+      ...state.overrides,
+      ambiguousSessions
+    }
+  };
+}

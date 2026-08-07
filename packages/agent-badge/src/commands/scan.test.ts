@@ -401,10 +401,11 @@ describe.sequential("runScanCommand", () => {
     }
   });
 
-  it("includes and persists an explicitly included excluded session", async () => {
+  it("persists an explicitly included excluded session until exclude removes it", async () => {
     const fixture = await createScanFixture();
     const firstOutput = createOutputCapture();
     const secondOutput = createOutputCapture();
+    const thirdOutput = createOutputCapture();
 
     try {
       runFullBackfillScanMock.mockResolvedValue(
@@ -421,6 +422,12 @@ describe.sequential("runScanCommand", () => {
         cwd: fixture.repo.root,
         homeRoot: fixture.providerHome.homeRoot,
         stdout: secondOutput.writer
+      });
+      const thirdRun = await runScanCommand({
+        cwd: fixture.repo.root,
+        homeRoot: fixture.providerHome.homeRoot,
+        stdout: thirdOutput.writer,
+        excludeSession: ["claude:excluded-session"]
       });
       const persistedState = await readStateFile(fixture.statePath);
 
@@ -447,15 +454,33 @@ describe.sequential("runScanCommand", () => {
         status: "included",
         overrideApplied: "include"
       });
-      expect(persistedState.overrides.ambiguousSessions).toMatchObject({
-        "claude:excluded-session": "include"
+      expect(thirdRun.overrideActions).toEqual([
+        {
+          sessionKey: "claude:excluded-session",
+          decision: "exclude"
+        }
+      ]);
+      expect(thirdRun.warnings).toEqual([]);
+      expect(thirdOutput.read()).toContain(
+        "claude:excluded-session => include override removed"
+      );
+      expect(
+        thirdRun.attribution.sessions.find(
+          (session) => session.session.providerSessionId === "excluded-session"
+        )
+      ).toMatchObject({
+        status: "excluded",
+        overrideApplied: null
       });
+      expect(persistedState.overrides.ambiguousSessions).not.toHaveProperty(
+        "claude:excluded-session"
+      );
     } finally {
       await fixture.cleanup();
     }
   });
 
-  it("reuses stored ambiguous overrides on a second scan", async () => {
+  it("reuses stored include overrides on a second scan", async () => {
     const fixture = await createScanFixture();
     const firstOutput = createOutputCapture();
     const secondOutput = createOutputCapture();
@@ -469,8 +494,7 @@ describe.sequential("runScanCommand", () => {
         cwd: fixture.repo.root,
         homeRoot: fixture.providerHome.homeRoot,
         stdout: firstOutput.writer,
-        includeSession: ["codex:ambiguous-include"],
-        excludeSession: ["claude:ambiguous-exclude"]
+        includeSession: ["codex:ambiguous-include"]
       });
       const secondRun = await runScanCommand({
         cwd: fixture.repo.root,
@@ -483,10 +507,6 @@ describe.sequential("runScanCommand", () => {
         {
           sessionKey: "codex:ambiguous-include",
           decision: "include"
-        },
-        {
-          sessionKey: "claude:ambiguous-exclude",
-          decision: "exclude"
         }
       ]);
       expect(
@@ -498,12 +518,11 @@ describe.sequential("runScanCommand", () => {
         secondRun.attribution.sessions.find(
           (session) => session.session.providerSessionId === "ambiguous-exclude"
         )?.status
-      ).toBe("excluded");
-      expect(persistedState.overrides.ambiguousSessions).toMatchObject({
-        "codex:ambiguous-include": "include",
-        "claude:ambiguous-exclude": "exclude"
+      ).toBe("ambiguous");
+      expect(persistedState.overrides.ambiguousSessions).toEqual({
+        "codex:ambiguous-include": "include"
       });
-      expect(secondOutput.read()).toContain("Excluded Sessions");
+      expect(secondOutput.read()).toContain("Ambiguous Sessions");
     } finally {
       await fixture.cleanup();
     }
@@ -559,7 +578,15 @@ describe.sequential("runScanCommand", () => {
   });
 
   it("registers the scan CLI command and forwards include or exclude session flags", async () => {
-    const fixture = await createScanFixture();
+    const initialState = parseAgentBadgeState({
+      ...defaultAgentBadgeState,
+      overrides: {
+        ambiguousSessions: {
+          "claude:ambiguous-exclude": "include"
+        }
+      }
+    });
+    const fixture = await createScanFixture(initialState);
 
     try {
       runFullBackfillScanMock.mockResolvedValueOnce(
@@ -593,11 +620,11 @@ describe.sequential("runScanCommand", () => {
         "claude:ambiguous-exclude"
       ]);
 
-      expect((await readStateFile(fixture.statePath)).overrides.ambiguousSessions)
-        .toMatchObject({
-          "codex:ambiguous-include": "include",
-          "claude:ambiguous-exclude": "exclude"
-        });
+      expect(
+        (await readStateFile(fixture.statePath)).overrides.ambiguousSessions
+      ).toEqual({
+        "codex:ambiguous-include": "include"
+      });
     } finally {
       await fixture.cleanup();
     }

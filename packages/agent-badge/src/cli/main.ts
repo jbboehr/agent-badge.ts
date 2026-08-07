@@ -101,7 +101,7 @@ export function buildProgram(): Command {
     )
     .option(
       "--exclude-session <provider:sessionId>",
-      "Exclude an ambiguous session from the current repo totals.",
+      "Remove a persisted include override for a session.",
       collectOptionValue,
       []
     )

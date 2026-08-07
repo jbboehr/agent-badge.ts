@@ -64,7 +64,7 @@ agent-badge scan [--include-session <provider:sessionId>] [--exclude-session <pr
 | Option | Meaning |
 | --- | --- |
 | `--include-session <provider:sessionId>` | Persist an include override for an ambiguous or excluded session in the current scan. |
-| `--exclude-session <provider:sessionId>` | Persist an exclude override for an ambiguous session in the current scan. |
+| `--exclude-session <provider:sessionId>` | Remove a persisted include override and return the session to normal attribution. |
 
 Representative output:
 
@@ -73,7 +73,7 @@ Repo: openai/agent-badge (agent-badge)
 Scanned Sessions: 3
 Deduped Sessions: 3
 Override Actions Applied:
-- codex:ambiguous-session => include
+- codex:ambiguous-session => include override saved
 
 Included Totals
 - Combined: 1 sessions, 120 tokens

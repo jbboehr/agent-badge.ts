@@ -179,6 +179,9 @@ describe("formatScanReport", () => {
   });
 
   it("prints Included Totals, Ambiguous Sessions, and Excluded Sessions", () => {
+    expect(report).toContain(
+      "codex:ambiguous-session => include override saved"
+    );
     expect(report).toContain("Included Totals");
     expect(report).toContain("Ambiguous Sessions");
     expect(report).toContain("Excluded Sessions");

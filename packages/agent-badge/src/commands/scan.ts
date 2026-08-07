@@ -11,6 +11,7 @@ import {
   parseAgentBadgeConfig,
   parseAgentBadgeState,
   resolveAgentBadgePaths,
+  removeAmbiguousSessionDecision,
   runFullBackfillScan,
   appendAgentBadgeLog,
   buildLogEntry,
@@ -105,19 +106,34 @@ function applyRequestedOverrides(
   const warnings: string[] = [];
 
   for (const action of requestedActions) {
+    if (action.decision === "exclude") {
+      if (
+        !Object.hasOwn(
+          nextState.overrides.ambiguousSessions,
+          action.sessionKey
+        )
+      ) {
+        warnings.push(
+          `Warning: cannot remove include override for ${action.sessionKey} because no persisted session override exists.`
+        );
+        continue;
+      }
+
+      nextState = removeAmbiguousSessionDecision(nextState, action.sessionKey);
+      overrideActions.push(action);
+      continue;
+    }
+
     const attributionStatus = attributionStatusBySessionKey.get(
       action.sessionKey
     );
     const canApply =
       attributionStatus === "ambiguous" ||
-      (action.decision === "include" && attributionStatus === "excluded");
+      attributionStatus === "excluded";
 
     if (!canApply) {
-      const eligibleStatuses =
-        action.decision === "include" ? "ambiguous or excluded" : "ambiguous";
-
       warnings.push(
-        `Warning: cannot apply ${action.decision} override for ${action.sessionKey} because it is not ${eligibleStatuses} in the current scan result.`
+        `Warning: cannot apply include override for ${action.sessionKey} because it is not ambiguous or excluded in the current scan result.`
       );
       continue;
     }

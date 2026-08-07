@@ -1,4 +1,7 @@
-import { applyAmbiguousSessionDecision } from "../attribution/override-store.js";
+import {
+  applyAmbiguousSessionDecision,
+  removeAmbiguousSessionDecision
+} from "../attribution/override-store.js";
 
 import type { AppliedScanOverrideAction } from "./scan-report.js";
 import type { AgentBadgeState } from "../state/state-schema.js";
@@ -64,11 +67,14 @@ export function applyCompletedScanState(
   };
 
   for (const action of options.scanResult.overrideActions ?? []) {
-    nextState = applyAmbiguousSessionDecision(
-      nextState,
-      action.sessionKey,
-      action.decision
-    );
+    nextState =
+      action.decision === "include"
+        ? applyAmbiguousSessionDecision(
+            nextState,
+            action.sessionKey,
+            action.decision
+          )
+        : removeAmbiguousSessionDecision(nextState, action.sessionKey);
   }
 
   return nextState;

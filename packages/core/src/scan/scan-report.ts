@@ -71,8 +71,10 @@ function formatOverrideActions(
 
   return [
     "Override Actions Applied:",
-    ...overrideActions.map(
-      (action) => `- ${action.sessionKey} => ${action.decision}`
+    ...overrideActions.map((action) =>
+      action.decision === "include"
+        ? `- ${action.sessionKey} => include override saved`
+        : `- ${action.sessionKey} => include override removed`
     )
   ];
 }

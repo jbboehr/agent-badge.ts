@@ -281,6 +281,100 @@ describe("runIncrementalRefresh", () => {
     });
   });
 
+  it("falls back to a full scan when a persisted override was removed", async () => {
+    const session = createSession({
+      provider: "codex",
+      providerSessionId: "removed-override",
+      tokenUsage: {
+        total: 42,
+        input: 42,
+        output: 0,
+        cacheCreation: null,
+        cacheRead: null,
+        reasoningOutput: null
+      }
+    });
+
+    runFullBackfillScanMock.mockResolvedValue({
+      repo: createRepoFingerprint(),
+      sessions: [session],
+      scannedProviders: ["codex"],
+      counts: {
+        scannedSessions: 1,
+        dedupedSessions: 1,
+        byProvider: {
+          codex: {
+            scannedSessions: 1,
+            dedupedSessions: 1
+          },
+          claude: {
+            scannedSessions: 0,
+            dedupedSessions: 0
+          }
+        }
+      }
+    });
+    attributeBackfillSessionsMock.mockReturnValue({
+      sessions: [createAttributedSession(session, "excluded")],
+      counts: {
+        included: 0,
+        ambiguous: 0,
+        excluded: 1
+      }
+    });
+
+    await withTempDir(async (cwd) => {
+      await writeRefreshCache({
+        cwd,
+        cache: {
+          ...defaultRefreshCache,
+          entries: {
+            [buildRefreshCacheKey(session)]: buildRefreshCacheEntry({
+              session,
+              status: "included",
+              overrideDecision: "include",
+              estimatedCostUsdMicros: null
+            })
+          }
+        }
+      });
+
+      const result = await runIncrementalRefresh({
+        cwd,
+        homeRoot: "/tmp/home",
+        config: {
+          providers: defaultAgentBadgeConfig.providers,
+          repo: defaultAgentBadgeConfig.repo
+        },
+        state: {
+          ...defaultAgentBadgeState,
+          checkpoints: {
+            codex: {
+              cursor: "opaque-codex",
+              lastScannedAt: "2026-03-30T11:00:00Z"
+            },
+            claude: {
+              cursor: "opaque-claude",
+              lastScannedAt: "2026-03-30T11:00:00Z"
+            }
+          }
+        },
+        forceFull: false
+      });
+
+      expect(runFullBackfillScanMock).toHaveBeenCalledOnce();
+      expect(scanCodexSessionsIncrementalMock).not.toHaveBeenCalled();
+      expect(result.scanMode).toBe("full");
+      expect(result.cache.entries["codex:removed-override"]).toEqual(
+        expect.objectContaining({
+          status: "excluded",
+          overrideDecision: null,
+          tokens: 42
+        })
+      );
+    });
+  });
+
   it("merges ambiguous sessions into the cache without zeroing their tokens", async () => {
     const changedCodexSession = createSession({
       provider: "codex",
@@ -351,7 +445,7 @@ describe("runIncrementalRefresh", () => {
             [buildRefreshCacheKey(ambiguousClaudeSession)]: buildRefreshCacheEntry({
               session: ambiguousClaudeSession,
               status: "ambiguous",
-              overrideDecision: null,
+              overrideDecision: "include",
               estimatedCostUsdMicros: null
             })
           }
