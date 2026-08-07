@@ -95,7 +95,7 @@ export function buildProgram(): Command {
     .description("Scan local agent history and report attributed usage.")
     .option(
       "--include-session <provider:sessionId>",
-      "Include an ambiguous session in the current repo totals.",
+      "Include an ambiguous or excluded session in the current repo totals.",
       collectOptionValue,
       []
     )

@@ -7,7 +7,7 @@ Commands below are shown as `agent-badge ...` for readability. The default setup
 | Command | Purpose |
 | --- | --- |
 | `init` | Write minimal repo-owned wiring and connect or reuse the publish gist. |
-| `scan` | Run a full attribution report and optionally resolve ambiguous sessions. |
+| `scan` | Run a full attribution report, resolve ambiguous sessions, or explicitly include an excluded session. |
 | `publish` | Publish aggregate badge JSON to the configured gist target. |
 | `refresh` | Refresh persisted totals and publish only when needed. |
 | `status` | Show current local, shared, and publish state. |
@@ -63,7 +63,7 @@ agent-badge scan [--include-session <provider:sessionId>] [--exclude-session <pr
 
 | Option | Meaning |
 | --- | --- |
-| `--include-session <provider:sessionId>` | Persist an include override for an ambiguous session in the current scan. |
+| `--include-session <provider:sessionId>` | Persist an include override for an ambiguous or excluded session in the current scan. |
 | `--exclude-session <provider:sessionId>` | Persist an exclude override for an ambiguous session in the current scan. |
 
 Representative output:

@@ -82,10 +82,11 @@ function applyRequestedOverrides(
   readonly overrideActions: readonly AppliedScanOverrideAction[];
   readonly warnings: readonly string[];
 } {
-  const ambiguousSessionKeys = new Set(
-    attribution.sessions
-      .filter((session) => session.status === "ambiguous")
-      .map((session) => buildAmbiguousSessionKey(session.session))
+  const attributionStatusBySessionKey = new Map(
+    attribution.sessions.map((session) => [
+      buildAmbiguousSessionKey(session.session),
+      session.status
+    ])
   );
 
   const requestedActions: AppliedScanOverrideAction[] = [
@@ -104,9 +105,19 @@ function applyRequestedOverrides(
   const warnings: string[] = [];
 
   for (const action of requestedActions) {
-    if (!ambiguousSessionKeys.has(action.sessionKey)) {
+    const attributionStatus = attributionStatusBySessionKey.get(
+      action.sessionKey
+    );
+    const canApply =
+      attributionStatus === "ambiguous" ||
+      (action.decision === "include" && attributionStatus === "excluded");
+
+    if (!canApply) {
+      const eligibleStatuses =
+        action.decision === "include" ? "ambiguous or excluded" : "ambiguous";
+
       warnings.push(
-        `Warning: cannot apply ${action.decision} override for ${action.sessionKey} because it is not ambiguous in the current scan result.`
+        `Warning: cannot apply ${action.decision} override for ${action.sessionKey} because it is not ${eligibleStatuses} in the current scan result.`
       );
       continue;
     }

@@ -22,19 +22,23 @@ Sessions that do not clear the threshold remain ambiguous and stay out of the ba
 
 ## Manual Overrides
 
-Use these flags on a full scan when you want to resolve ambiguity:
+Use these flags on a full scan when you want to resolve ambiguity or explicitly
+include a session that attribution excluded:
 
 ```bash
 agent-badge scan --include-session <provider:sessionId>
 agent-badge scan --exclude-session <provider:sessionId>
 ```
 
-Those decisions are persisted and reused on future scans and refreshes.
+`--include-session` accepts ambiguous or excluded sessions. `--exclude-session`
+accepts ambiguous sessions. Those decisions are persisted and reused on future
+scans and refreshes.
 
 ## Why This Matters
 
 - Strong signals are preferred over weak hints.
 - Ambiguous sessions are never auto-counted.
 - Manual include/exclude decisions are persisted and reused on future scans.
+- Excluded sessions can only enter the totals through an explicit include override.
 
 The badge is allowed to undercount. It is not allowed to bluff.
