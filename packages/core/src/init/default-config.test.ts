@@ -13,6 +13,10 @@ describe("createDefaultAgentBadgeConfig", () => {
         claude: {
           available: false,
           homeLabel: "~/.claude"
+        },
+        grok: {
+          available: true,
+          homeLabel: "~/.grok"
         }
       }
     });
@@ -23,6 +27,9 @@ describe("createDefaultAgentBadgeConfig", () => {
       },
       claude: {
         enabled: false
+      },
+      grok: {
+        enabled: true
       }
     });
   });
@@ -30,23 +37,27 @@ describe("createDefaultAgentBadgeConfig", () => {
   it.each([
     {
       codex: true,
-      claude: true
+      claude: true,
+      grok: false
     },
     {
       codex: true,
-      claude: false
+      claude: false,
+      grok: true
     },
     {
       codex: false,
-      claude: true
+      claude: true,
+      grok: false
     },
     {
       codex: false,
-      claude: false
+      claude: false,
+      grok: true
     }
   ])(
     "maps detected provider availability into config defaults (%j)",
-    ({ codex, claude }) => {
+    ({ codex, claude, grok }) => {
       const config = createDefaultAgentBadgeConfig({
         providers: {
           codex: {
@@ -56,12 +67,17 @@ describe("createDefaultAgentBadgeConfig", () => {
           claude: {
             available: claude,
             homeLabel: "~/.claude"
+          },
+          grok: {
+            available: grok,
+            homeLabel: "~/.grok"
           }
         }
       });
 
       expect(config.providers.codex.enabled).toBe(codex);
       expect(config.providers.claude.enabled).toBe(claude);
+      expect(config.providers.grok.enabled).toBe(grok);
     }
   );
 });

@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { appendFile, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -10,6 +10,7 @@ import {
   type NormalizedSessionSummary
 } from "../providers/session-summary.js";
 import { defaultAgentBadgeState } from "../state/state-schema.js";
+import { buildGrokIncrementalCursorFromSource } from "../providers/grok/grok-adapter.js";
 import {
   buildRefreshCacheEntry,
   buildRefreshCacheKey,
@@ -86,7 +87,15 @@ vi.mock("./full-backfill.js", async () => {
   };
 });
 
-import { runIncrementalRefresh } from "./incremental-refresh.js";
+import {
+  runIncrementalRefresh,
+  summarizeRefreshCache
+} from "./incremental-refresh.js";
+
+const defaultTestProviders = {
+  ...defaultAgentBadgeConfig.providers,
+  grok: { enabled: false }
+};
 
 function createSession(
   overrides: Partial<NormalizedSessionSummary> &
@@ -190,6 +199,46 @@ beforeEach(() => {
 });
 
 describe("runIncrementalRefresh", () => {
+  it("withholds a partial cached cost total when one included cost is unknown", () => {
+    const known = createSession({
+      provider: "codex",
+      providerSessionId: "known",
+      tokenUsage: { total: 10 }
+    });
+    const unknown = createSession({
+      provider: "grok",
+      providerSessionId: "unknown",
+      tokenUsage: { total: 20 }
+    });
+
+    expect(
+      summarizeRefreshCache({
+        ...defaultRefreshCache,
+        costsComputed: true,
+        entries: {
+          "codex:known": buildRefreshCacheEntry({
+            session: known,
+            status: "included",
+            overrideDecision: null,
+            estimatedCostUsdMicros: 100
+          }),
+          "grok:unknown": buildRefreshCacheEntry({
+            session: unknown,
+            status: "included",
+            overrideDecision: null,
+            estimatedCostUsdMicros: null
+          })
+        }
+      })
+    ).toEqual({
+      includedSessions: 2,
+      includedTokens: 30,
+      includedEstimatedCostUsdMicros: null,
+      ambiguousSessions: 0,
+      excludedSessions: 0
+    });
+  });
+
   it("falls back to a full scan when the derived cache is missing", async () => {
     const fullSession = createSession({
       provider: "codex",
@@ -237,7 +286,7 @@ describe("runIncrementalRefresh", () => {
         cwd,
         homeRoot: "/tmp/home",
         config: {
-          providers: defaultAgentBadgeConfig.providers,
+          providers: defaultTestProviders,
           repo: defaultAgentBadgeConfig.repo
         },
         state: {
@@ -343,7 +392,7 @@ describe("runIncrementalRefresh", () => {
         cwd,
         homeRoot: "/tmp/home",
         config: {
-          providers: defaultAgentBadgeConfig.providers,
+          providers: defaultTestProviders,
           repo: defaultAgentBadgeConfig.repo
         },
         state: {
@@ -456,7 +505,7 @@ describe("runIncrementalRefresh", () => {
         cwd,
         homeRoot: "/tmp/home",
         config: {
-          providers: defaultAgentBadgeConfig.providers,
+          providers: defaultTestProviders,
           repo: defaultAgentBadgeConfig.repo
         },
         state: {
@@ -566,7 +615,8 @@ describe("runIncrementalRefresh", () => {
     await withTempDir(async (cwd) => {
       const providerDirectories = {
         codex: "/data/custom-codex",
-        claude: "/data/custom-claude"
+        claude: "/data/custom-claude",
+        grok: "/data/custom-grok"
       };
 
       await writeRefreshCache({
@@ -579,7 +629,7 @@ describe("runIncrementalRefresh", () => {
         homeRoot: "/tmp/home",
         providerDirectories,
         config: {
-          providers: defaultAgentBadgeConfig.providers,
+          providers: defaultTestProviders,
           repo: defaultAgentBadgeConfig.repo
         },
         state: {
@@ -683,7 +733,7 @@ describe("runIncrementalRefresh", () => {
         cwd,
         homeRoot: "/tmp/home",
         config: {
-          providers: defaultAgentBadgeConfig.providers,
+          providers: defaultTestProviders,
           repo: defaultAgentBadgeConfig.repo
         },
         state: {
@@ -844,6 +894,146 @@ describe("runIncrementalRefresh", () => {
           estimatedCostUsdMicros: null
         })
       );
+    });
+  });
+
+  it("incrementally refreshes Grok usage and evicts a deleted Grok session", async () => {
+    await withTempDir(async (cwd) => {
+      const grokRoot = join(cwd, "custom-grok");
+      const sessionDir = join(grokRoot, "sessions", "repo", "grok-1");
+      const updatesPath = join(sessionDir, "updates.jsonl");
+      const turnCompleted = (
+        promptId: string,
+        totalTokens: number
+      ): string =>
+        JSON.stringify({
+          method: "_x.ai/session/update",
+          params: {
+            update: {
+              sessionUpdate: "turn_completed",
+              prompt_id: promptId,
+              usage: {
+                inputTokens: totalTokens - 1,
+                outputTokens: 1,
+                totalTokens,
+                costUsdTicks: totalTokens * 10_000
+              }
+            }
+          }
+        });
+
+      await mkdir(sessionDir, { recursive: true });
+      await writeFile(
+        join(sessionDir, "summary.json"),
+        `${JSON.stringify({
+          info: { id: "grok-1", cwd },
+          created_at: "2026-08-01T10:00:00Z",
+          updated_at: "2026-08-01T11:00:00Z",
+          current_model_id: "grok-build-0.1",
+          git_root_dir: cwd,
+          git_remotes: ["git@github.com:example/agent-badge.git"],
+          head_branch: "main"
+        })}\n`,
+        "utf8"
+      );
+      await writeFile(updatesPath, `${turnCompleted("p1", 11)}\n`, "utf8");
+
+      const cursor = await buildGrokIncrementalCursorFromSource(cwd, grokRoot);
+      const cachedSession = createSession({
+        provider: "grok",
+        providerSessionId: "grok-1",
+        cwd,
+        tokenUsage: {
+          total: 11,
+          input: 10,
+          output: 1,
+          cacheCreation: 0,
+          cacheRead: 0,
+          reasoningOutput: 0
+        },
+        metadata: {
+          model: "grok-build-0.1",
+          modelProvider: "xai",
+          sourceKind: "grok-session-jsonl",
+          cliVersion: null,
+          reportedCostUsdMicros: 11
+        }
+      });
+      await writeRefreshCache({
+        cwd,
+        cache: {
+          ...defaultRefreshCache,
+          entries: {
+            "grok:grok-1": buildRefreshCacheEntry({
+              session: cachedSession,
+              status: "included",
+              overrideDecision: null,
+              estimatedCostUsdMicros: null
+            })
+          }
+        }
+      });
+
+      await appendFile(updatesPath, `${turnCompleted("p2", 22)}\n`, "utf8");
+      resolveRepoFingerprintMock.mockResolvedValue(createRepoFingerprint());
+      attributeBackfillSessionsMock.mockImplementation(
+        ({ sessions }: { sessions: readonly NormalizedSessionSummary[] }) => ({
+          sessions: sessions.map((session) =>
+            createAttributedSession(session, "included")
+          ),
+          counts: { included: sessions.length, ambiguous: 0, excluded: 0 }
+        })
+      );
+      const config = {
+        providers: {
+          codex: { enabled: false },
+          claude: { enabled: false },
+          grok: { enabled: true }
+        },
+        repo: defaultAgentBadgeConfig.repo
+      };
+      const first = await runIncrementalRefresh({
+        cwd,
+        homeRoot: cwd,
+        providerDirectories: { grok: grokRoot },
+        config,
+        state: {
+          ...defaultAgentBadgeState,
+          checkpoints: {
+            ...defaultAgentBadgeState.checkpoints,
+            grok: { cursor, lastScannedAt: "2026-08-01T12:00:00Z" }
+          }
+        },
+        forceFull: false
+      });
+
+      expect(first.scanMode).toBe("incremental");
+      expect(first.summary.includedTokens).toBe(33);
+      expect(first.cache.entries["grok:grok-1"]?.tokens).toBe(33);
+
+      await writeRefreshCache({ cwd, cache: first.cache });
+      await rm(sessionDir, { recursive: true, force: true });
+      const second = await runIncrementalRefresh({
+        cwd,
+        homeRoot: cwd,
+        providerDirectories: { grok: grokRoot },
+        config,
+        state: {
+          ...defaultAgentBadgeState,
+          checkpoints: {
+            ...defaultAgentBadgeState.checkpoints,
+            grok: {
+              cursor: first.providerCursors.grok ?? null,
+              lastScannedAt: "2026-08-01T12:01:00Z"
+            }
+          }
+        },
+        forceFull: false
+      });
+
+      expect(second.scanMode).toBe("incremental");
+      expect(second.cache.entries["grok:grok-1"]).toBeUndefined();
+      expect(second.summary.includedSessions).toBe(0);
     });
   });
 });

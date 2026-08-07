@@ -12,6 +12,10 @@ import {
   scanCodexSessionsIncremental
 } from "../providers/codex/codex-adapter.js";
 import {
+  buildGrokIncrementalCursorFromSource,
+  scanGrokSessionsIncremental
+} from "../providers/grok/grok-adapter.js";
+import {
   parseNormalizedSessionSummary,
   type NormalizedSessionSummary
 } from "../providers/session-summary.js";
@@ -41,6 +45,7 @@ interface ProviderIncrementalResult {
   readonly sessions: NormalizedSessionSummary[];
   readonly cursor: string;
   readonly mode: "incremental" | "full";
+  readonly deletedSessionIds: readonly string[];
 }
 
 export interface RunIncrementalRefreshOptions {
@@ -73,6 +78,10 @@ function enabledProviders(
     providers.push("claude");
   }
 
+  if (config.providers.grok?.enabled) {
+    providers.push("grok");
+  }
+
   return providers;
 }
 
@@ -103,11 +112,16 @@ function cacheOverrideDecisionsMatchState(
   );
 }
 
-function summarizeRefreshCache(cache: RefreshCache): AgentBadgeRefreshSummary {
+export function summarizeRefreshCache(
+  cache: RefreshCache
+): AgentBadgeRefreshSummary {
   const entries = Object.values(cache.entries);
-  const hasEstimatedCost = entries.some(
-    (entry) => entry.status === "included" && entry.estimatedCostUsdMicros !== null
+  const includedEntries = entries.filter(
+    (entry) => entry.status === "included"
   );
+  const hasCompleteEstimatedCost =
+    includedEntries.length > 0 &&
+    includedEntries.every((entry) => entry.estimatedCostUsdMicros !== null);
 
   return entries.reduce<AgentBadgeRefreshSummary>(
     (summary, entry) => ({
@@ -115,7 +129,7 @@ function summarizeRefreshCache(cache: RefreshCache): AgentBadgeRefreshSummary {
         summary.includedSessions + (entry.status === "included" ? 1 : 0),
       includedTokens:
         summary.includedTokens + (entry.status === "included" ? entry.tokens : 0),
-      includedEstimatedCostUsdMicros: hasEstimatedCost
+      includedEstimatedCostUsdMicros: hasCompleteEstimatedCost
         ? (summary.includedEstimatedCostUsdMicros ?? 0) +
           (entry.status === "included" ? (entry.estimatedCostUsdMicros ?? 0) : 0)
         : null,
@@ -127,7 +141,7 @@ function summarizeRefreshCache(cache: RefreshCache): AgentBadgeRefreshSummary {
     {
       includedSessions: 0,
       includedTokens: 0,
-      includedEstimatedCostUsdMicros: hasEstimatedCost ? 0 : null,
+      includedEstimatedCostUsdMicros: hasCompleteEstimatedCost ? 0 : null,
       ambiguousSessions: 0,
       excludedSessions: 0
     }
@@ -153,9 +167,7 @@ async function mergeAttributedSessionsIntoCache(
   const observationSessions = attributedSessions.map(
     (attributedSession) => attributedSession.session
   );
-  const estimatedCostBySessionKey = shouldEstimateCost
-    ? new Map<string, number>()
-    : new Map<string, number>();
+  const estimatedCostBySessionKey = new Map<string, number | null>();
 
   if (shouldEstimateCost && observationSessions.length > 0) {
     const pricingCatalog = await resolvePricingCatalog({
@@ -178,6 +190,7 @@ async function mergeAttributedSessionsIntoCache(
 
   return {
     ...cache,
+    costsComputed: shouldEstimateCost,
     entries: attributedSessions.reduce(
       (entries, attributedSession) => {
         const cacheKey = buildRefreshCacheKey(attributedSession.session);
@@ -190,7 +203,9 @@ async function mergeAttributedSessionsIntoCache(
               options.state.overrides.ambiguousSessions[cacheKey] ??
               attributedSession.overrideApplied,
             estimatedCostUsdMicros: shouldEstimateCost
-              ? (estimatedCostBySessionKey.get(cacheKey) ?? 0)
+              ? estimatedCostBySessionKey.has(cacheKey)
+                ? (estimatedCostBySessionKey.get(cacheKey) ?? null)
+                : 0
               : null
           });
 
@@ -240,6 +255,13 @@ async function buildProviderCursorsFromSessions(
     providerCursors.claude = await buildClaudeIncrementalCursorFromSource(
       homeRoot,
       providerDirectories?.claude
+    );
+  }
+
+  if (providerSet.has("grok")) {
+    providerCursors.grok = await buildGrokIncrementalCursorFromSource(
+      homeRoot,
+      providerDirectories?.grok
     );
   }
 
@@ -297,7 +319,24 @@ async function runProviderIncrementalScans(
           provider,
           sessions: result.sessions,
           cursor: result.cursor,
-          mode: result.mode
+          mode: result.mode,
+          deletedSessionIds: []
+        };
+      }
+
+      if (provider === "grok") {
+        const result = await scanGrokSessionsIncremental({
+          homeRoot: options.homeRoot,
+          grokRoot: options.providerDirectories?.grok,
+          cursor: options.state.checkpoints.grok.cursor
+        });
+
+        return {
+          provider,
+          sessions: result.sessions,
+          cursor: result.cursor,
+          mode: result.mode,
+          deletedSessionIds: result.deletedSessionIds
         };
       }
 
@@ -311,7 +350,8 @@ async function runProviderIncrementalScans(
         provider,
         sessions: result.sessions,
         cursor: result.cursor,
-        mode: result.mode
+        mode: result.mode,
+        deletedSessionIds: []
       };
     })
   );
@@ -350,17 +390,15 @@ export async function runIncrementalRefresh(
   if (
     (options.config.badge?.mode === "combined" ||
       options.config.badge?.mode === "cost") &&
-    Object.values(cache.entries).some(
-      (entry) =>
-        entry.status === "included" &&
-        entry.estimatedCostUsdMicros === null
-    )
+    !cache.costsComputed
   ) {
     return runFullRefresh(options, providers);
   }
 
   if (
-    providers.some((provider) => options.state.checkpoints[provider].cursor === null)
+    providers.some(
+      (provider) => options.state.checkpoints[provider]?.cursor == null
+    )
   ) {
     return runFullRefresh(options, providers);
   }
@@ -372,6 +410,21 @@ export async function runIncrementalRefresh(
   }
 
   cache = filterCacheByEnabledProviders(cache, providers);
+  const deletedCacheKeys = new Set(
+    providerScans.flatMap((scan) =>
+      scan.deletedSessionIds.map(
+        (sessionId) => `${scan.provider}:${sessionId}`
+      )
+    )
+  );
+  cache = {
+    ...cache,
+    entries: Object.fromEntries(
+      Object.entries(cache.entries).filter(
+        ([sessionKey]) => !deletedCacheKeys.has(sessionKey)
+      )
+    )
+  };
 
   const repo = await resolveRepoFingerprint({
     cwd: options.cwd,

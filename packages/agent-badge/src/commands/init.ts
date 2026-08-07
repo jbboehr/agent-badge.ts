@@ -111,7 +111,9 @@ function writePreflightSummary(
       preflight.providers.codex.available ? "yes" : "no"
     } (${preflight.providers.codex.homeLabel}), claude=${
       preflight.providers.claude.available ? "yes" : "no"
-    } (${preflight.providers.claude.homeLabel})`,
+    } (${preflight.providers.claude.homeLabel}), grok=${
+      preflight.providers.grok.available ? "yes" : "no"
+    } (${preflight.providers.grok.homeLabel})`,
     `- GitHub auth: ${
       preflight.githubAuth.available ? preflight.githubAuth.source : "not detected"
     }`,

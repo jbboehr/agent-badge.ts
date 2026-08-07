@@ -14,7 +14,8 @@ describe("resolveProviderDirectories", () => {
       })
     ).toEqual({
       codex: resolve("/home/example/.codex"),
-      claude: resolve("/home/example/.claude")
+      claude: resolve("/home/example/.claude"),
+      grok: resolve("/home/example/.grok")
     });
   });
 
@@ -25,12 +26,14 @@ describe("resolveProviderDirectories", () => {
         homeRoot: "/home/example",
         env: {
           AGENT_BADGE_CODEX_DIR: "/data/codex",
-          AGENT_BADGE_CLAUDE_DIR: "/data/claude"
+          AGENT_BADGE_CLAUDE_DIR: "/data/claude",
+          AGENT_BADGE_GROK_DIR: "/data/grok"
         }
       })
     ).toEqual({
       codex: resolve("/data/codex"),
-      claude: resolve("/data/claude")
+      claude: resolve("/data/claude"),
+      grok: resolve("/data/grok")
     });
   });
 
@@ -41,12 +44,27 @@ describe("resolveProviderDirectories", () => {
         homeRoot: "/home/example",
         env: {
           AGENT_BADGE_CODEX_DIR: "var/codex",
-          AGENT_BADGE_CLAUDE_DIR: "~/var/claude"
+          AGENT_BADGE_CLAUDE_DIR: "~/var/claude",
+          GROK_HOME: "~/var/grok"
         }
       })
     ).toEqual({
       codex: resolve("/work/repo/var/codex"),
-      claude: join(resolve("/home/example"), "var/claude")
+      claude: join(resolve("/home/example"), "var/claude"),
+      grok: join(resolve("/home/example"), "var/grok")
     });
+  });
+
+  it("prefers AGENT_BADGE_GROK_DIR over GROK_HOME", () => {
+    expect(
+      resolveProviderDirectories({
+        cwd: "/work/repo",
+        homeRoot: "/home/example",
+        env: {
+          AGENT_BADGE_GROK_DIR: "/data/agent-badge-grok",
+          GROK_HOME: "/data/grok-home"
+        }
+      }).grok
+    ).toBe(resolve("/data/agent-badge-grok"));
   });
 });

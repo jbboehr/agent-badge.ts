@@ -393,7 +393,8 @@ describe("runPublishCommand", () => {
         homeRoot: fixture.homeRoot,
         providerDirectories: {
           codex: join(fixture.homeRoot, ".codex"),
-          claude: join(fixture.homeRoot, ".claude")
+          claude: join(fixture.homeRoot, ".claude"),
+          grok: join(fixture.homeRoot, ".grok")
         },
         config: configuredConfig
       });

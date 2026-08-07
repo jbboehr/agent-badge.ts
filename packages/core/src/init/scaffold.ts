@@ -216,6 +216,11 @@ function reconcileConfig(
             enabled:
               readBoolean(readJsonObject(providers.claude).enabled) ??
               defaults.providers.claude.enabled
+          },
+          grok: {
+            enabled:
+              readBoolean(readJsonObject(providers.grok).enabled) ??
+              defaults.providers.grok.enabled
           }
         },
         repo: {
@@ -350,7 +355,8 @@ function reconcileState(
     },
     checkpoints: {
       codex: reconcileCheckpoint(checkpoints.codex, defaults.checkpoints.codex),
-      claude: reconcileCheckpoint(checkpoints.claude, defaults.checkpoints.claude)
+      claude: reconcileCheckpoint(checkpoints.claude, defaults.checkpoints.claude),
+      grok: reconcileCheckpoint(checkpoints.grok, defaults.checkpoints.grok)
     },
     publish: {
       status:

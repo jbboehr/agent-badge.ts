@@ -3,10 +3,12 @@ import { isAbsolute, join, resolve } from "node:path";
 
 export const AGENT_BADGE_CODEX_DIR_ENV = "AGENT_BADGE_CODEX_DIR";
 export const AGENT_BADGE_CLAUDE_DIR_ENV = "AGENT_BADGE_CLAUDE_DIR";
+export const AGENT_BADGE_GROK_DIR_ENV = "AGENT_BADGE_GROK_DIR";
 
 export interface ProviderDirectories {
   readonly codex: string;
   readonly claude: string;
+  readonly grok: string;
 }
 
 export interface ResolveProviderDirectoriesOptions {
@@ -57,6 +59,12 @@ export function resolveProviderDirectories(
     claude: resolveConfiguredDirectory(
       env[AGENT_BADGE_CLAUDE_DIR_ENV],
       join(homeRoot, ".claude"),
+      cwd,
+      homeRoot
+    ),
+    grok: resolveConfiguredDirectory(
+      env[AGENT_BADGE_GROK_DIR_ENV] ?? env.GROK_HOME,
+      join(homeRoot, ".grok"),
       cwd,
       homeRoot
     )

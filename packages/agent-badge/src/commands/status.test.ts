@@ -222,7 +222,7 @@ describe("runStatusCommand", () => {
       expect(lines).toEqual([
         "agent-badge status",
         "- Totals: 5 sessions, 610 tokens",
-        "- Providers: codex=enabled, claude=enabled",
+        "- Providers: codex=enabled, claude=enabled, grok=enabled",
         sharedRuntimeLine,
         "- Publish: published | gist configured=yes | last published=2026-03-30T19:10:00.000Z | gistId=gist_789 | lastPublishedHash=hash_789",
         "- Pre-push policy: fail-soft",
@@ -231,7 +231,7 @@ describe("runStatusCommand", () => {
         "- Shared mode: legacy | health=healthy | contributors=0",
         "- Shared issues: legacy-no-contributors=1",
         "- Last refresh: 2026-03-30T19:12:00.000Z (incremental)",
-        "- Checkpoints: codex=2026-03-30T19:00:00.000Z, claude=2026-03-30T19:05:00.000Z"
+        "- Checkpoints: codex=2026-03-30T19:00:00.000Z, claude=2026-03-30T19:05:00.000Z, grok=not yet scanned"
       ]);
       expect(output.read()).not.toContain("opaque-codex-cursor");
       expect(output.read()).not.toContain("opaque-claude-cursor");

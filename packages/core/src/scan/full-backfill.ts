@@ -3,6 +3,7 @@ import { realpath } from "node:fs/promises";
 import type { AgentBadgeConfig } from "../config/config-schema.js";
 import { scanClaudeSessions } from "../providers/claude/claude-adapter.js";
 import { scanCodexSessions } from "../providers/codex/codex-adapter.js";
+import { scanGrokSessions } from "../providers/grok/grok-adapter.js";
 import type { ProviderDirectories } from "../providers/provider-directories.js";
 import {
   parseNormalizedSessionSummary,
@@ -45,6 +46,10 @@ function createProviderCounts(): Record<ProviderName, BackfillProviderCounts> {
       dedupedSessions: 0
     },
     claude: {
+      scannedSessions: 0,
+      dedupedSessions: 0
+    },
+    grok: {
       scannedSessions: 0,
       dedupedSessions: 0
     }
@@ -97,6 +102,15 @@ export async function runFullBackfillScan(
           claudeRoot: options.providerDirectories?.claude
         }).then((sessions) => ({
           provider: "claude" as const,
+          sessions
+        }))
+      : Promise.resolve(null),
+    options.config.providers.grok?.enabled
+      ? scanGrokSessions({
+          homeRoot: options.homeRoot,
+          grokRoot: options.providerDirectories?.grok
+        }).then((sessions) => ({
+          provider: "grok" as const,
           sessions
         }))
       : Promise.resolve(null)

@@ -137,6 +137,7 @@ describe("runConfigCommand", () => {
       expect(output.read()).toContain("agent-badge config");
       expect(output.read()).toContain("- providers.codex.enabled=true");
       expect(output.read()).toContain("- providers.claude.enabled=true");
+      expect(output.read()).toContain("- providers.grok.enabled=true");
       expect(output.read()).toContain("- badge.label=AI burn");
       expect(output.read()).toContain("- badge.mode=combined");
       expect(output.read()).toContain("- badge.style=flat");
@@ -174,6 +175,13 @@ describe("runConfigCommand", () => {
         stdout: output.writer,
         action: "set",
         key: "providers.claude.enabled",
+        value: "false"
+      });
+      await runConfigCommand({
+        cwd: fixture.repoRoot,
+        stdout: output.writer,
+        action: "set",
+        key: "providers.grok.enabled",
         value: "false"
       });
       await runConfigCommand({
@@ -244,6 +252,7 @@ describe("runConfigCommand", () => {
 
       expect(config.providers.codex.enabled).toBe(false);
       expect(config.providers.claude.enabled).toBe(false);
+      expect(config.providers.grok.enabled).toBe(false);
       expect(config.badge.label).toBe("Agent Sessions");
       expect(config.badge.mode).toBe("tokens");
       expect(config.badge.style).toBe("for-the-badge");

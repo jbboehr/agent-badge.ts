@@ -23,6 +23,10 @@ export function getConfiguredProviders(
     providers.push("claude");
   }
 
+  if (config.providers.grok?.enabled) {
+    providers.push("grok");
+  }
+
   return providers;
 }
 

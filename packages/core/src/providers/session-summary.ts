@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const normalizedSessionSummarySchema = z
   .object({
-    provider: z.enum(["codex", "claude"]),
+    provider: z.enum(["codex", "claude", "grok"]),
     providerSessionId: z.string().min(1),
     startedAt: z.string().min(1).nullable(),
     updatedAt: z.string().min(1).nullable(),
@@ -37,7 +37,13 @@ export const normalizedSessionSummarySchema = z
         model: z.string().min(1).nullable(),
         modelProvider: z.string().min(1).nullable(),
         sourceKind: z.string().min(1).nullable(),
-        cliVersion: z.string().min(1).nullable()
+        cliVersion: z.string().min(1).nullable(),
+        reportedCostUsdMicros: z
+          .number()
+          .int()
+          .nonnegative()
+          .nullable()
+          .optional()
       })
       .strict()
   })

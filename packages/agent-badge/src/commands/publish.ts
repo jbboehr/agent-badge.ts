@@ -144,7 +144,7 @@ async function buildPublisherObservations(options: {
   readonly codexRoot: string;
   readonly includeEstimatedCost: boolean;
 }): Promise<SharedContributorObservationMap> {
-  const estimatedCostBySessionKey = new Map<string, number>();
+  const estimatedCostBySessionKey = new Map<string, number | null>();
 
   if (options.includeEstimatedCost && options.attribution.sessions.length > 0) {
     const pricingCatalog = await resolvePricingCatalog({
@@ -179,7 +179,9 @@ async function buildPublisherObservations(options: {
           overrideDecision: attributedSession.overrideApplied,
           tokens: attributedSession.session.tokenUsage.total,
           estimatedCostUsdMicros: options.includeEstimatedCost
-            ? (estimatedCostBySessionKey.get(sessionKey) ?? 0)
+            ? estimatedCostBySessionKey.has(sessionKey)
+              ? (estimatedCostBySessionKey.get(sessionKey) ?? null)
+              : 0
             : null
         }
       ];

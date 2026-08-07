@@ -11,7 +11,7 @@ export const REFRESH_CACHE_FILE = ".agent-badge/cache/session-index.json";
 
 const refreshCacheEntrySchema = z
   .object({
-    provider: z.enum(["codex", "claude"]),
+    provider: z.enum(["codex", "claude", "grok"]),
     providerSessionId: z.string().min(1),
     sessionUpdatedAt: z.string().min(1).nullable(),
     status: z.enum(["included", "ambiguous", "excluded"]),
@@ -30,6 +30,7 @@ const refreshCacheEntrySchema = z
 const refreshCacheSchema = z
   .object({
     version: z.literal(2),
+    costsComputed: z.boolean().optional().default(false),
     entries: z.record(z.string(), refreshCacheEntrySchema)
   })
   .strict();
@@ -72,6 +73,7 @@ export interface BuildRefreshCacheEntryOptions {
 
 export const defaultRefreshCache: RefreshCache = {
   version: 2,
+  costsComputed: false,
   entries: {}
 };
 

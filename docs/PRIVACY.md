@@ -18,7 +18,7 @@ The following data must never leave the local machine:
 
 ## Local-First Boundary
 
-- Provider scanning runs against local directories configured by `AGENT_BADGE_CODEX_DIR` and `AGENT_BADGE_CLAUDE_DIR`, defaulting to `~/.codex` and `~/.claude`.
+- Provider scanning runs against local directories configured by `AGENT_BADGE_CODEX_DIR`, `AGENT_BADGE_CLAUDE_DIR`, and `AGENT_BADGE_GROK_DIR`, defaulting to `~/.codex`, `~/.claude`, and `GROK_HOME` or `~/.grok`.
 - Attribution and override decisions are persisted locally in `.agent-badge/`.
 - Remote publishing writes aggregate endpoint JSON for Shields plus shared-state files that use opaque digest keys instead of raw provider session ids.
 

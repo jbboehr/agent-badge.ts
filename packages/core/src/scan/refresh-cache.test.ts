@@ -120,6 +120,21 @@ describe("refresh-cache", () => {
     });
   });
 
+  it("treats caches created before cost tracking as not yet computed", async () => {
+    await withTempDir(async (cwd) => {
+      const cachePath = join(cwd, REFRESH_CACHE_FILE);
+
+      await mkdir(join(cwd, ".agent-badge", "cache"), { recursive: true });
+      await writeFile(
+        cachePath,
+        `${JSON.stringify({ version: 2, entries: {} })}\n`,
+        "utf8"
+      );
+
+      expect(await readRefreshCache({ cwd })).toEqual(defaultRefreshCache);
+    });
+  });
+
   it("preserves ambiguous session tokens for shared publish", () => {
     const session = createSession();
 

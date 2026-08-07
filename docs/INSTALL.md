@@ -18,11 +18,11 @@ There are only two setup actions to remember:
 | --- | --- | --- |
 | Node.js | `20.x`, `22.x`, `24.x` | The runtime and initializer are tested in CI on these release lines. |
 | Git repository | required | `agent-badge init` expects to run inside a repo. |
-| Local provider data | `~/.codex` and/or `~/.claude` by default | Override with `AGENT_BADGE_CODEX_DIR` and `AGENT_BADGE_CLAUDE_DIR` when provider data lives elsewhere. |
+| Local provider data | `~/.codex`, `~/.claude`, and/or `~/.grok` by default | Override with `AGENT_BADGE_CODEX_DIR`, `AGENT_BADGE_CLAUDE_DIR`, and `AGENT_BADGE_GROK_DIR` when provider data lives elsewhere. Grok Build also honors `GROK_HOME`. |
 | GitHub auth | optional for local setup, required for live publish | Without auth, init finishes locally and defers gist publishing. |
 | Public GitHub Gist | required for live publish | The stable badge URL is backed by a public gist you own. |
 
-If neither configured provider directory exists, install still succeeds, but the badge will not report meaningful usage until provider data appears.
+If none of the configured provider directories exist, install still succeeds, but the badge will not report meaningful usage until provider data appears.
 
 ## First-Shot Recommended Path
 

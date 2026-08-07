@@ -270,27 +270,18 @@ function checkGit(preflight: InitPreflightResult): DoctorCheck {
 }
 
 function checkProviders(preflight: InitPreflightResult): DoctorCheck {
-  const { codex, claude } = preflight.providers;
+  const { codex, claude, grok } = preflight.providers;
+  const detail = `Detected homes: codex=${codex.available ? "yes" : "no"}, claude=${claude.available ? "yes" : "no"}, grok=${grok.available ? "yes" : "no"}`;
 
-  if (!codex.available && !claude.available) {
+  if (!codex.available && !claude.available && !grok.available) {
     return {
       id: "providers",
       status: "fail",
       message: "No local provider data detected",
-      detail: `Detected homes: codex=${codex.available ? "yes" : "no"}, claude=${claude.available ? "yes" : "no"}`,
+      detail,
       fix: buildFix([
-        "Enable local usage traces for at least one supported provider, or configure AGENT_BADGE_CODEX_DIR or AGENT_BADGE_CLAUDE_DIR."
+        "Enable local usage traces for at least one supported provider, or configure AGENT_BADGE_CODEX_DIR, AGENT_BADGE_CLAUDE_DIR, or AGENT_BADGE_GROK_DIR."
       ])
-    };
-  }
-
-  if (!codex.available || !claude.available) {
-    return {
-      id: "providers",
-      status: "warn",
-      message: "Partial provider data detected",
-      detail: `Detected homes: codex=${codex.available ? "yes" : "no"}, claude=${claude.available ? "yes" : "no"}`,
-      fix: buildFix(["Enable missing provider data and rerun `agent-badge init` for full coverage."])
     };
   }
 
@@ -298,20 +289,24 @@ function checkProviders(preflight: InitPreflightResult): DoctorCheck {
     id: "providers",
     status: "pass",
     message: "Provider directories detected",
-    detail: `Detected homes: codex=${codex.available ? "yes" : "no"}, claude=${claude.available ? "yes" : "no"}`,
+    detail,
     fix: []
   };
 }
 
 async function checkScanAccess(preflight: InitPreflightResult): Promise<DoctorCheck> {
-  if (!preflight.providers.codex.available && !preflight.providers.claude.available) {
+  if (
+    !preflight.providers.codex.available &&
+    !preflight.providers.claude.available &&
+    !preflight.providers.grok.available
+  ) {
     return {
       id: "scan-access",
       status: "warn",
       message: "No provider directories found for scan-readiness",
       detail: "Scan health depends on the configured local provider usage directories.",
       fix: buildFix([
-        "Enable provider directories or set AGENT_BADGE_CODEX_DIR or AGENT_BADGE_CLAUDE_DIR, then rerun `agent-badge doctor`."
+        "Enable provider directories or set AGENT_BADGE_CODEX_DIR, AGENT_BADGE_CLAUDE_DIR, or AGENT_BADGE_GROK_DIR, then rerun `agent-badge doctor`."
       ])
     };
   }
@@ -320,7 +315,7 @@ async function checkScanAccess(preflight: InitPreflightResult): Promise<DoctorCh
     id: "scan-access",
     status: "pass",
     message: "Scan-ready provider directories available",
-    detail: `Provider access check passed for codex=${preflight.providers.codex.available ? "yes" : "no"}, claude=${preflight.providers.claude.available ? "yes" : "no"}`,
+    detail: `Provider access check passed for codex=${preflight.providers.codex.available ? "yes" : "no"}, claude=${preflight.providers.claude.available ? "yes" : "no"}, grok=${preflight.providers.grok.available ? "yes" : "no"}`,
     fix: []
   };
 }

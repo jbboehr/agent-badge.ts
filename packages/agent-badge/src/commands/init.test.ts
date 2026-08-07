@@ -763,10 +763,15 @@ describe("runInitCommand", () => {
         claude: {
           cursor: expect.any(String),
           lastScannedAt: expect.any(String)
+        },
+        grok: {
+          cursor: null,
+          lastScannedAt: null
         }
       });
       expect(refreshCache).toEqual({
         version: 2,
+        costsComputed: true,
         entries: {}
       });
       expect(

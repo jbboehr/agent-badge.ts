@@ -76,12 +76,12 @@ Symptom: scan or refresh reports missing provider data roots.
 
 Recovery:
 
-1. Check whether the configured provider directories exist (`~/.codex` and `~/.claude` by default).
-2. If provider data lives elsewhere, set `AGENT_BADGE_CODEX_DIR` or `AGENT_BADGE_CLAUDE_DIR` to that directory.
+1. Check whether the configured provider directories exist (`~/.codex`, `~/.claude`, and `~/.grok` by default).
+2. If provider data lives elsewhere, set `AGENT_BADGE_CODEX_DIR`, `AGENT_BADGE_CLAUDE_DIR`, or `AGENT_BADGE_GROK_DIR` to that directory. Grok Build also honors `GROK_HOME`.
 3. Disable unavailable providers via `agent-badge config` until data appears.
 4. Run `agent-badge doctor` for targeted remediation guidance.
 
-If both configured directories are missing, install can still succeed, but the badge will not reflect meaningful usage yet.
+If all configured directories are missing, install can still succeed, but the badge will not reflect meaningful usage yet.
 
 ## ambiguous sessions are not counted
 

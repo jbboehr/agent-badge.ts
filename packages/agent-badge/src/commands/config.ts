@@ -24,6 +24,7 @@ type ConfigAction = "get" | "set";
 type SupportedConfigKey =
   | "providers.codex.enabled"
   | "providers.claude.enabled"
+  | "providers.grok.enabled"
   | "badge.label"
   | "badge.mode"
   | "badge.style"
@@ -57,6 +58,7 @@ const PRIVACY_AGGREGATE_ONLY_ERROR =
 const supportedConfigKeys = [
   "providers.codex.enabled",
   "providers.claude.enabled",
+  "providers.grok.enabled",
   "badge.label",
   "badge.mode",
   "badge.style",
@@ -176,6 +178,8 @@ function readConfigValue(config: AgentBadgeConfig, key: SupportedConfigKey): str
       return String(config.providers.codex.enabled);
     case "providers.claude.enabled":
       return String(config.providers.claude.enabled);
+    case "providers.grok.enabled":
+      return String(config.providers.grok.enabled);
     case "badge.label":
       return config.badge.label;
     case "badge.mode":
@@ -293,6 +297,16 @@ function applyConfigMutation(
         providers: {
           ...config.providers,
           claude: {
+            enabled: parseBooleanValue(key, value)
+          }
+        }
+      });
+    case "providers.grok.enabled":
+      return parseAgentBadgeConfig({
+        ...config,
+        providers: {
+          ...config.providers,
+          grok: {
             enabled: parseBooleanValue(key, value)
           }
         }

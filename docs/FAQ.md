@@ -20,9 +20,9 @@ npm init agent-badge@latest
 
 If GitHub auth is missing, repo setup still completes and live publishing is deferred until you rerun `agent-badge init` after auth is ready.
 
-## What if I only use Codex or only use Claude?
+## What if I only use one supported provider?
 
-That is supported. `agent-badge` scans whichever provider directories exist on the current machine. If one provider is missing, the CLI reports partial coverage instead of inventing data.
+That is supported. `agent-badge` scans whichever Codex, Claude Code, or Grok Build provider directories exist on the current machine instead of inventing data for missing providers.
 
 ## Does install fail if GitHub auth is missing?
 
@@ -40,9 +40,9 @@ Aggregate badge payloads and shared metadata only. No prompt text, transcript te
 
 Yes for the runtime. Use npm for the one-step initializer, or install `@legotin/agent-badge` directly and use that package manager's exec form. See [INSTALL.md](INSTALL.md).
 
-## What if neither provider directory exists?
+## What if no provider directory exists?
 
-The CLI can still install itself, but the badge will not reflect meaningful usage until at least one supported provider directory exists on that machine. Use `AGENT_BADGE_CODEX_DIR` or `AGENT_BADGE_CLAUDE_DIR` when the data is stored outside the default locations.
+The CLI can still install itself, but the badge will not reflect meaningful usage until at least one supported provider directory exists on that machine. Use `AGENT_BADGE_CODEX_DIR`, `AGENT_BADGE_CLAUDE_DIR`, or `AGENT_BADGE_GROK_DIR` when the data is stored outside the default locations. Grok Build also honors `GROK_HOME`.
 
 ## Where is the single source of truth for commands and flags?
 

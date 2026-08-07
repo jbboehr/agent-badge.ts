@@ -178,7 +178,8 @@ export function deriveSharedIncludedTotals(
   let sessions = 0;
   let tokens = 0;
   let estimatedCostUsdMicros = 0;
-  let hasNonNullCost = false;
+  let hasIncludedSession = false;
+  let hasUnknownCost = false;
 
   for (const observations of groupSharedObservationsByDigest(records).values()) {
     if (resolveSharedObservationDecision(observations) !== "include") {
@@ -189,17 +190,20 @@ export function deriveSharedIncludedTotals(
 
     sessions += 1;
     tokens += winner.observation.tokens;
+    hasIncludedSession = true;
 
     if (winner.observation.estimatedCostUsdMicros !== null) {
       estimatedCostUsdMicros += winner.observation.estimatedCostUsdMicros;
-      hasNonNullCost = true;
+    } else {
+      hasUnknownCost = true;
     }
   }
 
   return {
     sessions,
     tokens,
-    estimatedCostUsdMicros: hasNonNullCost ? estimatedCostUsdMicros : null
+    estimatedCostUsdMicros:
+      hasIncludedSession && !hasUnknownCost ? estimatedCostUsdMicros : null
   };
 }
 

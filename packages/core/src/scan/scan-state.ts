@@ -56,6 +56,12 @@ export function applyCompletedScanState(
         options.scanResult,
         "claude",
         options.now
+      ),
+      grok: applyProviderCheckpoint(
+        options.previousState,
+        options.scanResult,
+        "grok",
+        options.now
       )
     },
     overrides: {

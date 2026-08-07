@@ -46,7 +46,13 @@ interface ProviderFixture {
   readonly homeRoot: string;
   readonly codexRoot: string | null;
   readonly claudeRoot: string | null;
+  readonly grokRoot: string | null;
   cleanup(): Promise<void>;
+  writeProviderFile(
+    provider: "codex" | "claude" | "grok",
+    relativePath: string,
+    content: string
+  ): Promise<string>;
 }
 
 interface RepoFixture {
@@ -264,6 +270,9 @@ describe("runFullBackfillScan", () => {
             },
             claude: {
               enabled: true
+            },
+            grok: {
+              enabled: false
             }
           },
           repo: {
@@ -330,6 +339,9 @@ describe("runFullBackfillScan", () => {
             },
             claude: {
               enabled: true
+            },
+            grok: {
+              enabled: false
             }
           },
           repo: {
@@ -355,11 +367,87 @@ describe("runFullBackfillScan", () => {
     });
   });
 
+  it("includes Grok Build sessions in a full backfill", async () => {
+    await withBackfillFixture(async ({ providerHome, repo }) => {
+      await providerHome.writeProviderFile(
+        "grok",
+        "sessions/repo/grok-full/summary.json",
+        `${JSON.stringify({
+          info: { id: "grok-full", cwd: repo.root },
+          created_at: "2026-08-01T10:00:00Z",
+          updated_at: "2026-08-01T10:05:00Z",
+          current_model_id: "grok-build-0.1",
+          git_root_dir: repo.root,
+          git_remotes: ["https://github.com/openai/agent-badge.git"],
+          head_branch: "main"
+        })}\n`
+      );
+      await providerHome.writeProviderFile(
+        "grok",
+        "sessions/repo/grok-full/updates.jsonl",
+        `${JSON.stringify({
+          method: "_x.ai/session/update",
+          params: {
+            update: {
+              sessionUpdate: "turn_completed",
+              prompt_id: "prompt-1",
+              usage: {
+                inputTokens: 80,
+                outputTokens: 20,
+                totalTokens: 100,
+                cachedReadTokens: 30,
+                costUsdTicks: 5_000_000
+              }
+            }
+          }
+        })}\n`
+      );
+
+      const result = await runFullBackfillScan({
+        cwd: repo.root,
+        homeRoot: providerHome.homeRoot,
+        config: {
+          providers: {
+            codex: { enabled: false },
+            claude: { enabled: false },
+            grok: { enabled: true }
+          },
+          repo: {
+            aliases: {
+              remotes: [],
+              slugs: []
+            }
+          }
+        }
+      });
+
+      expect(result.scannedProviders).toEqual(["grok"]);
+      expect(result.counts.byProvider.grok).toEqual({
+        scannedSessions: 1,
+        dedupedSessions: 1
+      });
+      expect(result.sessions[0]).toMatchObject({
+        provider: "grok",
+        providerSessionId: "grok-full",
+        tokenUsage: {
+          total: 100,
+          input: 50,
+          output: 20,
+          cacheRead: 30
+        },
+        metadata: {
+          reportedCostUsdMicros: 500
+        }
+      });
+    });
+  });
+
   it("routes scans to configured provider directories", async () => {
     await withBackfillFixture(async ({ providerHome, repo }) => {
       const providerDirectories = {
         codex: join(providerHome.homeRoot, "custom-codex"),
-        claude: join(providerHome.homeRoot, "custom-claude")
+        claude: join(providerHome.homeRoot, "custom-claude"),
+        grok: join(providerHome.homeRoot, "custom-grok")
       };
       scanCodexSessionsMock.mockResolvedValueOnce([]);
       scanClaudeSessionsMock.mockResolvedValueOnce([]);
@@ -371,7 +459,8 @@ describe("runFullBackfillScan", () => {
         config: {
           providers: {
             codex: { enabled: true },
-            claude: { enabled: true }
+            claude: { enabled: true },
+            grok: { enabled: false }
           },
           repo: {
             aliases: {
@@ -405,6 +494,9 @@ describe("runFullBackfillScan", () => {
             },
             claude: {
               enabled: true
+            },
+            grok: {
+              enabled: false
             }
           },
           repo: {

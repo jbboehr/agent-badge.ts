@@ -218,6 +218,7 @@ describe("runRefreshCommand", () => {
       },
       cache: {
         version: 2 as const,
+        costsComputed: false,
         entries: {
           "codex:session-1": {
             provider: "codex" as const,
@@ -251,7 +252,8 @@ describe("runRefreshCommand", () => {
         homeRoot: fixture.homeRoot,
         providerDirectories: {
           codex: join(fixture.homeRoot, ".codex"),
-          claude: join(fixture.homeRoot, ".claude")
+          claude: join(fixture.homeRoot, ".claude"),
+          grok: join(fixture.homeRoot, ".grok")
         },
         config: defaultAgentBadgeConfig,
         state: defaultAgentBadgeState,
@@ -336,6 +338,7 @@ describe("runRefreshCommand", () => {
       },
       cache: {
         version: 2 as const,
+        costsComputed: false,
         entries: {
           "codex:shared-session": {
             provider: "codex" as const,
@@ -1148,6 +1151,7 @@ describe("runRefreshCommand", () => {
       },
       cache: {
         version: 2 as const,
+        costsComputed: false,
         entries: {
           "codex:session-9": {
             provider: "codex" as const,
@@ -1333,6 +1337,7 @@ describe("runRefreshCommand", () => {
       },
       cache: {
         version: 2 as const,
+        costsComputed: false,
         entries: {
           "codex:session-9": {
             provider: "codex" as const,

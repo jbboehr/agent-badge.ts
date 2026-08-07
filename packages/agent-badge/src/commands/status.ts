@@ -36,6 +36,9 @@ interface StatusCommandConfig {
     readonly claude: {
       readonly enabled: boolean;
     };
+    readonly grok: {
+      readonly enabled: boolean;
+    };
   };
   readonly publish: {
     readonly provider: "github-gist";
@@ -213,6 +216,10 @@ function parseStatusCommandConfig(input: unknown): StatusCommandConfig {
   const providers = asObject(root.providers, "providers");
   const codex = asObject(providers.codex, "providers.codex");
   const claude = asObject(providers.claude, "providers.claude");
+  const grok =
+    typeof providers.grok === "undefined"
+      ? { enabled: true }
+      : asObject(providers.grok, "providers.grok");
   const publish = asObject(root.publish, "publish");
   const refresh = asObject(root.refresh, "refresh");
   const prePush = asObject(refresh.prePush, "refresh.prePush");
@@ -229,6 +236,9 @@ function parseStatusCommandConfig(input: unknown): StatusCommandConfig {
       },
       claude: {
         enabled: readBoolean(claude.enabled, "providers.claude.enabled")
+      },
+      grok: {
+        enabled: readBoolean(grok.enabled, "providers.grok.enabled", true)
       }
     },
     publish: {
@@ -268,7 +278,7 @@ function formatTotalsLine(state: AgentBadgeState): string {
 }
 
 function formatProvidersLine(config: StatusCommandConfig): string {
-  return `codex=${config.providers.codex.enabled ? "enabled" : "disabled"}, claude=${config.providers.claude.enabled ? "enabled" : "disabled"}`;
+  return `codex=${config.providers.codex.enabled ? "enabled" : "disabled"}, claude=${config.providers.claude.enabled ? "enabled" : "disabled"}, grok=${config.providers.grok.enabled ? "enabled" : "disabled"}`;
 }
 
 function formatSharedRuntimeLine(
@@ -369,7 +379,7 @@ function formatLastRefreshLine(state: AgentBadgeState): string {
 }
 
 function formatCheckpointsLine(state: AgentBadgeState): string {
-  return `codex=${state.checkpoints.codex.lastScannedAt ?? "not yet scanned"}, claude=${state.checkpoints.claude.lastScannedAt ?? "not yet scanned"}`;
+  return `codex=${state.checkpoints.codex.lastScannedAt ?? "not yet scanned"}, claude=${state.checkpoints.claude.lastScannedAt ?? "not yet scanned"}, grok=${state.checkpoints.grok.lastScannedAt ?? "not yet scanned"}`;
 }
 
 export async function runStatusCommand(

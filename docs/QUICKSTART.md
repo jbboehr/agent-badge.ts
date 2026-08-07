@@ -8,7 +8,7 @@ Before you start:
 
 - use Node `20.x`, `22.x`, or `24.x`
 - run inside an existing Git repo
-- expect meaningful results only if the configured provider directories exist (`~/.codex` and `~/.claude` by default)
+- expect meaningful results only if at least one configured provider directory exists (`~/.codex`, `~/.claude`, and `~/.grok` by default)
 
 For the complete support matrix, see [INSTALL.md](INSTALL.md).
 
@@ -73,7 +73,7 @@ agent-badge init preflight
 - Git: existing repository, origin configured
 - README: README.md
 - Package manager: npm
-- Providers: codex=yes (~/.codex), claude=yes (~/.claude)
+- Providers: codex=yes (~/.codex), claude=yes (~/.claude), grok=yes (~/.grok)
 - GitHub auth: not detected
 - Existing scaffold: none
 ```
@@ -127,7 +127,7 @@ Healthy shared-mode output looks like:
 ```text
 agent-badge status
 - Totals: 5 sessions, 610 tokens
-- Providers: codex=enabled, claude=enabled
+- Providers: codex=enabled, claude=enabled, grok=enabled
 - Publish: published | gist configured=yes | last published=2026-03-30T19:10:00.000Z | gistId=gist_789 | lastPublishedHash=hash_789
 - Pre-push policy: fail-soft
 - Live badge trust: current

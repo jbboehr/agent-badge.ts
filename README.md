@@ -18,7 +18,7 @@
 
 ## What is it
 
-`agent-badge` is an open-source CLI that adds a GitHub README badge showing **AI coding-agent usage** for a repo. It currently supports **Claude Code** and **OpenAI Codex**, shows **aggregate tokens + estimated cost**, and publishes **aggregate badge data only** — not prompts, transcripts, filenames, or local paths.
+`agent-badge` is an open-source CLI that adds a GitHub README badge showing **AI coding-agent usage** for a repo. It currently supports **Claude Code**, **OpenAI Codex**, and **xAI Grok Build**, shows **aggregate tokens + estimated or provider-reported cost**, and publishes **aggregate badge data only** — not prompts, transcripts, filenames, or local paths.
 
 ## 60-Second Path
 

@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, rm, writeFile as writeFileOnDisk } from "node:fs/promis
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
-export type ProviderName = "codex" | "claude";
+export type ProviderName = "codex" | "claude" | "grok";
 
 export interface ProviderFixtureSeed {
   readonly files?: Record<string, string>;
@@ -11,12 +11,14 @@ export interface ProviderFixtureSeed {
 export interface CreateProviderFixtureOptions {
   readonly codex?: boolean | ProviderFixtureSeed;
   readonly claude?: boolean | ProviderFixtureSeed;
+  readonly grok?: boolean | ProviderFixtureSeed;
 }
 
 export interface ProviderFixture {
   readonly homeRoot: string;
   readonly codexRoot: string | null;
   readonly claudeRoot: string | null;
+  readonly grokRoot: string | null;
   cleanup(): Promise<void>;
   writeProviderFile(
     provider: ProviderName,
@@ -47,7 +49,7 @@ async function createProviderRoot(
     return null;
   }
 
-  const providerRoot = join(homeRoot, provider === "codex" ? ".codex" : ".claude");
+  const providerRoot = join(homeRoot, `.${provider}`);
   await mkdir(providerRoot, { recursive: true });
 
   const files = typeof seed === "object" ? seed.files ?? {} : {};
@@ -68,16 +70,23 @@ export async function createProviderFixture(
     "claude",
     options.claude ?? true
   );
+  const grokRoot = await createProviderRoot(homeRoot, "grok", options.grok ?? true);
 
   return {
     homeRoot,
     codexRoot,
     claudeRoot,
+    grokRoot,
     async cleanup() {
       await rm(homeRoot, { recursive: true, force: true });
     },
     async writeProviderFile(provider, relativePath, content) {
-      const root = provider === "codex" ? codexRoot : claudeRoot;
+      const root =
+        provider === "codex"
+          ? codexRoot
+          : provider === "claude"
+            ? claudeRoot
+            : grokRoot;
 
       if (root === null) {
         throw new Error(`Provider fixture for ${provider} is disabled.`);

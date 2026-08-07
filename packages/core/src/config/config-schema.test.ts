@@ -138,6 +138,18 @@ describe("agentBadgeConfigSchema", () => {
     });
   });
 
+  it("enables Grok when reading configs created before Grok support", () => {
+    expect(
+      parseAgentBadgeConfig({
+        ...defaultAgentBadgeConfig,
+        providers: {
+          codex: { enabled: true },
+          claude: { enabled: false }
+        }
+      }).providers.grok
+    ).toEqual({ enabled: true });
+  });
+
   it("rejects path-like repo aliases", () => {
     expect(() =>
       parseAgentBadgeConfig({

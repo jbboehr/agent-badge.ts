@@ -799,7 +799,9 @@ export async function estimateSessionCostsUsdMicrosByKey({
   homeRoot,
   codexRoot,
   pricingCatalog
-}: EstimateSessionCostsOptions): Promise<Readonly<Record<string, number>>> {
+}: EstimateSessionCostsOptions): Promise<
+  Readonly<Record<string, number | null>>
+> {
   const codexSessionIds = sessions
     .filter(
       (session) =>
@@ -819,6 +821,23 @@ export async function estimateSessionCostsUsdMicrosByKey({
       const rolloutInfo = codexRolloutInfoBySessionId[session.providerSessionId];
       const hydratedUsage = rolloutInfo?.usage ?? undefined;
       const model = session.metadata.model ?? rolloutInfo?.model ?? null;
+
+      if (typeof session.metadata.reportedCostUsdMicros === "number") {
+        return [
+          `${session.provider}:${session.providerSessionId}`,
+          session.metadata.reportedCostUsdMicros
+        ] as const;
+      }
+
+      // Grok's durable ledger deliberately omits cost whenever any prompt is
+      // partial or incomplete. There is no local xAI rate card to replace it,
+      // so preserve "unknown" instead of publishing that usage as free.
+      if (session.metadata.modelProvider === "xai") {
+        return [
+          `${session.provider}:${session.providerSessionId}`,
+          null
+        ] as const;
+      }
 
       if (model === null) {
         return [`${session.provider}:${session.providerSessionId}`, 0] as const;
@@ -889,10 +908,15 @@ export async function estimateSessionCostsUsdMicrosByKey({
 
 export async function estimateIncludedCostUsdMicros(
   options: EstimateIncludedCostOptions
-): Promise<number> {
+): Promise<number | null> {
   const byKey = await estimateSessionCostsUsdMicrosByKey(options);
+  const costs = Object.values(byKey);
 
-  return Object.values(byKey).reduce((sum, value) => sum + value, 0);
+  if (costs.some((cost) => cost === null)) {
+    return null;
+  }
+
+  return costs.reduce<number>((sum, value) => sum + (value ?? 0), 0);
 }
 
 export function formatEstimatedCostUsd(micros: number): string {

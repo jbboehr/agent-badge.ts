@@ -190,6 +190,33 @@ describe("shared-merge", () => {
     });
   });
 
+  it("withholds a partial aggregate when any included cost is unknown", () => {
+    expect(
+      deriveSharedIncludedTotals([
+        createContributor("pub-1", {
+          ...createObservation(digestA, {
+            sessionUpdatedAt: "2026-04-01T12:00:00.000Z",
+            attributionStatus: "included",
+            overrideDecision: null,
+            tokens: 100,
+            estimatedCostUsdMicros: 10
+          }),
+          ...createObservation(digestB, {
+            sessionUpdatedAt: "2026-04-01T12:00:00.000Z",
+            attributionStatus: "included",
+            overrideDecision: null,
+            tokens: 200,
+            estimatedCostUsdMicros: null
+          })
+        })
+      ])
+    ).toEqual({
+      sessions: 2,
+      tokens: 300,
+      estimatedCostUsdMicros: null
+    });
+  });
+
   it("exact ties fall back to the lexicographically smaller publisherId", () => {
     expect(
       compareSharedObservationWatermark(

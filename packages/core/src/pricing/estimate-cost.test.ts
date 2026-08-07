@@ -101,6 +101,94 @@ describe("estimateIncludedCostUsdMicros", () => {
     expect(estimated).toBe(7_245);
   });
 
+  it("uses exact provider-reported Grok cost without a rate card", async () => {
+    const session = parseNormalizedSessionSummary({
+      provider: "grok",
+      providerSessionId: "grok-session-1",
+      startedAt: "2026-08-01T10:00:00Z",
+      updatedAt: "2026-08-01T10:05:00Z",
+      cwd: "/repo/main",
+      gitBranch: "main",
+      observedRemoteUrl: "https://github.com/example/repo.git",
+      observedRemoteUrlNormalized: "https://github.com/example/repo",
+      attributionHints: {
+        cwdRealPath: "/repo/main",
+        transcriptProjectKey: null
+      },
+      tokenUsage: {
+        total: 1900,
+        input: 1000,
+        output: 200,
+        cacheCreation: 300,
+        cacheRead: 400,
+        reasoningOutput: 50
+      },
+      lineage: {
+        parentSessionId: null,
+        kind: "root"
+      },
+      metadata: {
+        model: "grok-build-0.1",
+        modelProvider: "xai",
+        sourceKind: "grok-session-jsonl",
+        cliVersion: null,
+        reportedCostUsdMicros: 12_345
+      }
+    });
+
+    const estimated = await estimateIncludedCostUsdMicros({
+      sessions: [session],
+      homeRoot: "/does/not/matter",
+      pricingCatalog: createPricingCatalog()
+    });
+
+    expect(estimated).toBe(12_345);
+  });
+
+  it("preserves unknown Grok cost instead of treating incomplete usage as free", async () => {
+    const session = parseNormalizedSessionSummary({
+      provider: "grok",
+      providerSessionId: "grok-incomplete",
+      startedAt: "2026-08-01T10:00:00Z",
+      updatedAt: "2026-08-01T10:05:00Z",
+      cwd: "/repo/main",
+      gitBranch: "main",
+      observedRemoteUrl: null,
+      observedRemoteUrlNormalized: null,
+      attributionHints: {
+        cwdRealPath: "/repo/main",
+        transcriptProjectKey: null
+      },
+      tokenUsage: {
+        total: 120,
+        input: 100,
+        output: 20,
+        cacheCreation: 0,
+        cacheRead: 0,
+        reasoningOutput: 5
+      },
+      lineage: {
+        parentSessionId: null,
+        kind: "root"
+      },
+      metadata: {
+        model: "grok-build-0.1",
+        modelProvider: "xai",
+        sourceKind: "grok-session-jsonl",
+        cliVersion: null,
+        reportedCostUsdMicros: null
+      }
+    });
+
+    const estimated = await estimateIncludedCostUsdMicros({
+      sessions: [session],
+      homeRoot: "/does/not/matter",
+      pricingCatalog: createPricingCatalog()
+    });
+
+    expect(estimated).toBeNull();
+  });
+
   it("hydrates Codex usage from rollout token_count events", async () => {
     const homeRoot = await mkdtemp(join(tmpdir(), "agent-badge-cost-home-"));
     const codexRoot = join(homeRoot, "custom-codex");

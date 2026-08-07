@@ -25,18 +25,20 @@ If both recognized directories exist and no override is set, `.github/agent-badg
 
 ## Provider Data Directories
 
-Codex and Claude data directories can be configured independently:
+Codex, Claude, and Grok Build data directories can be configured independently:
 
 ```bash
 AGENT_BADGE_CODEX_DIR=/data/codex \
 AGENT_BADGE_CLAUDE_DIR=/data/claude \
+AGENT_BADGE_GROK_DIR=/data/grok \
 agent-badge scan
 ```
 
 `AGENT_BADGE_CODEX_DIR` defaults to `~/.codex`. `AGENT_BADGE_CLAUDE_DIR`
-defaults to `~/.claude`. Absolute paths are accepted, relative paths resolve
-from the repository working directory, and paths beginning with `~/` resolve
-from the current home directory.
+defaults to `~/.claude`. `AGENT_BADGE_GROK_DIR` defaults to `GROK_HOME` when
+that variable is set, then to `~/.grok`. Absolute paths are accepted, relative
+paths resolve from the repository working directory, and paths beginning with
+`~/` resolve from the current home directory.
 
 These environment variables are read by `init`, `scan`, `publish`, `refresh`,
 and `doctor`. Keep them available to Git hooks as well if pre-push refreshes
@@ -50,6 +52,7 @@ Use `agent-badge config` or `agent-badge config get` to inspect current values, 
 | --- | --- | --- | --- |
 | `providers.codex.enabled` | `true`, `false` | `true` | Include or ignore Codex data during scan and refresh. |
 | `providers.claude.enabled` | `true`, `false` | `true` | Include or ignore Claude data during scan and refresh. |
+| `providers.grok.enabled` | `true`, `false` | `true` | Include or ignore Grok Build data during scan and refresh. |
 | `badge.label` | any non-empty string | `AI burn` | Changes the left-side badge label. |
 | `badge.mode` | `combined`, `tokens`, `cost` | `combined` | Changes what the badge message displays. |
 | `badge.style` | `flat`, `flat-square`, `plastic`, `for-the-badge`, `social` | `flat` | Changes the Shields badge style embedded in the stable badge URL. |
@@ -127,14 +130,15 @@ agent-badge config set badge.cacheSeconds 900
 
 This updates the stored badge URL to use a different `cacheSeconds` value. The default is `300`.
 
-### Codex-only or Claude-only tracking
+### Provider-specific tracking
 
 ```bash
 agent-badge config set providers.claude.enabled false
 agent-badge config set providers.codex.enabled false
+agent-badge config set providers.grok.enabled false
 ```
 
-Disable the provider you do not want included.
+Disable any provider you do not want included.
 
 ### Turn off push-time refresh
 

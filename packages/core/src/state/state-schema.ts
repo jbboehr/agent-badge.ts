@@ -75,7 +75,11 @@ export const agentBadgeStateSchema = z
     checkpoints: z
       .object({
         codex: checkpointSchema,
-        claude: checkpointSchema
+        claude: checkpointSchema,
+        grok: checkpointSchema.optional().default({
+          cursor: null,
+          lastScannedAt: null
+        })
       })
       .strict(),
     publish: z
@@ -146,6 +150,10 @@ export const defaultAgentBadgeState: AgentBadgeState = {
       lastScannedAt: null
     },
     claude: {
+      cursor: null,
+      lastScannedAt: null
+    },
+    grok: {
       cursor: null,
       lastScannedAt: null
     }

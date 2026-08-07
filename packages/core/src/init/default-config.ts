@@ -24,6 +24,11 @@ export function createDefaultAgentBadgeConfig(
         enabled:
           options.providers?.claude.available ??
           defaultAgentBadgeConfig.providers.claude.enabled
+      },
+      grok: {
+        enabled:
+          options.providers?.grok?.available ??
+          defaultAgentBadgeConfig.providers.grok.enabled
       }
     },
     repo: {

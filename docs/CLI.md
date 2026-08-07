@@ -79,6 +79,7 @@ Included Totals
 - Combined: 1 sessions, 120 tokens
 - codex: 1 sessions, 120 tokens
 - claude: 0 sessions, 0 tokens
+- grok: 0 sessions, 0 tokens
 - Counts: included=1, ambiguous=1, excluded=1
 
 Ambiguous Sessions
@@ -137,7 +138,7 @@ Representative healthy output:
 ```text
 agent-badge status
 - Totals: 5 sessions, 610 tokens
-- Providers: codex=enabled, claude=enabled
+- Providers: codex=enabled, claude=enabled, grok=enabled
 - Publish: published | gist configured=yes | last published=2026-03-30T19:10:00.000Z | gistId=gist_789 | lastPublishedHash=hash_789
 - Pre-push policy: fail-soft
 - Live badge trust: current

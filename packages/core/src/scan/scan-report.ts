@@ -39,7 +39,8 @@ function collectIncludedTotals(
     IncludedProviderTotals
   > = {
     codex: { sessions: 0, tokens: 0 },
-    claude: { sessions: 0, tokens: 0 }
+    claude: { sessions: 0, tokens: 0 },
+    grok: { sessions: 0, tokens: 0 }
   };
 
   for (const session of sessions) {
@@ -55,8 +56,14 @@ function collectIncludedTotals(
 
   return {
     combined: {
-      sessions: byProvider.codex.sessions + byProvider.claude.sessions,
-      tokens: byProvider.codex.tokens + byProvider.claude.tokens
+      sessions:
+        byProvider.codex.sessions +
+        byProvider.claude.sessions +
+        byProvider.grok.sessions,
+      tokens:
+        byProvider.codex.tokens +
+        byProvider.claude.tokens +
+        byProvider.grok.tokens
     },
     byProvider
   };
@@ -116,6 +123,7 @@ export function formatScanReport(result: ScanReportResult): string {
     `- Combined: ${includedTotals.combined.sessions} sessions, ${includedTotals.combined.tokens} tokens`,
     `- codex: ${includedTotals.byProvider.codex.sessions} sessions, ${includedTotals.byProvider.codex.tokens} tokens`,
     `- claude: ${includedTotals.byProvider.claude.sessions} sessions, ${includedTotals.byProvider.claude.tokens} tokens`,
+    `- grok: ${includedTotals.byProvider.grok.sessions} sessions, ${includedTotals.byProvider.grok.tokens} tokens`,
     `- Counts: included=${result.counts.included}, ambiguous=${result.counts.ambiguous}, excluded=${result.counts.excluded}`,
     "",
     "Ambiguous Sessions",

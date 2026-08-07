@@ -22,6 +22,21 @@ describe("agentBadgeStateSchema", () => {
     expect(defaultAgentBadgeState.refresh.summary).toBeNull();
   });
 
+  it("adds an empty Grok checkpoint to state created before Grok support", () => {
+    expect(
+      parseAgentBadgeState({
+        ...defaultAgentBadgeState,
+        checkpoints: {
+          codex: defaultAgentBadgeState.checkpoints.codex,
+          claude: defaultAgentBadgeState.checkpoints.claude
+        }
+      }).checkpoints.grok
+    ).toEqual({
+      cursor: null,
+      lastScannedAt: null
+    });
+  });
+
   it("parses the deferred publish state without dropping gist bookkeeping", () => {
     expect(
       parseAgentBadgeState({

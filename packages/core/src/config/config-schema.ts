@@ -27,7 +27,8 @@ export const agentBadgeConfigSchema = z
     providers: z
       .object({
         codex: providerConfigSchema,
-        claude: providerConfigSchema
+        claude: providerConfigSchema,
+        grok: providerConfigSchema.optional().default({ enabled: true })
       })
       .strict(),
     repo: z
@@ -90,6 +91,9 @@ export const defaultAgentBadgeConfig: AgentBadgeConfig = {
       enabled: true
     },
     claude: {
+      enabled: true
+    },
+    grok: {
       enabled: true
     }
   },

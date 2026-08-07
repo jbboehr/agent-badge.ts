@@ -383,7 +383,8 @@ describe.sequential("runScanCommand", () => {
         homeRoot: fixture.providerHome.homeRoot,
         providerDirectories: {
           codex: codexRoot,
-          claude: claudeRoot
+          claude: claudeRoot,
+          grok: join(fixture.providerHome.homeRoot, ".grok")
         },
         config: defaultAgentBadgeConfig
       });

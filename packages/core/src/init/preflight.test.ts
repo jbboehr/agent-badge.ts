@@ -112,10 +112,12 @@ describe("runInitPreflight", () => {
     const providers = await createProviderFixture({ codex: false, claude: false });
     const codexRoot = join(providers.root, "custom-codex");
     const claudeRoot = join(providers.root, "custom-claude");
+    const grokRoot = join(providers.root, "custom-grok");
 
     await Promise.all([
       mkdir(codexRoot, { recursive: true }),
-      mkdir(claudeRoot, { recursive: true })
+      mkdir(claudeRoot, { recursive: true }),
+      mkdir(grokRoot, { recursive: true })
     ]);
 
     try {
@@ -124,7 +126,8 @@ describe("runInitPreflight", () => {
         homeRoot: providers.root,
         env: {
           AGENT_BADGE_CODEX_DIR: codexRoot,
-          AGENT_BADGE_CLAUDE_DIR: claudeRoot
+          AGENT_BADGE_CLAUDE_DIR: claudeRoot,
+          AGENT_BADGE_GROK_DIR: grokRoot
         }
       });
 
@@ -136,6 +139,10 @@ describe("runInitPreflight", () => {
         claude: {
           available: true,
           homeLabel: claudeRoot
+        },
+        grok: {
+          available: true,
+          homeLabel: grokRoot
         }
       });
     } finally {

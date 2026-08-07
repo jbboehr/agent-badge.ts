@@ -5,10 +5,11 @@ import { resolve } from "node:path";
 import {
   AGENT_BADGE_CLAUDE_DIR_ENV,
   AGENT_BADGE_CODEX_DIR_ENV,
+  AGENT_BADGE_GROK_DIR_ENV,
   resolveProviderDirectories
 } from "../providers/provider-directories.js";
 
-export type ProviderName = "codex" | "claude";
+export type ProviderName = "codex" | "claude" | "grok";
 export type ProviderHomeLabel = string;
 
 export interface ProviderAvailability {
@@ -19,6 +20,7 @@ export interface ProviderAvailability {
 export interface ProviderDetectionResult {
   readonly codex: ProviderAvailability;
   readonly claude: ProviderAvailability;
+  readonly grok: ProviderAvailability;
 }
 
 export interface DetectProviderAvailabilityOptions {
@@ -60,6 +62,12 @@ export function detectProviderAvailability(
       env[AGENT_BADGE_CLAUDE_DIR_ENV]?.trim()
         ? directories.claude
         : "~/.claude"
+    ),
+    grok: buildProviderAvailability(
+      directories.grok,
+      env[AGENT_BADGE_GROK_DIR_ENV]?.trim() || env.GROK_HOME?.trim()
+        ? directories.grok
+        : "~/.grok"
     )
   };
 }
