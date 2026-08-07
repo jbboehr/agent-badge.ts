@@ -40,9 +40,9 @@ Aggregate badge payloads and shared metadata only. No prompt text, transcript te
 
 Yes for the runtime. Use npm for the one-step initializer, or install `@legotin/agent-badge` directly and use that package manager's exec form. See [INSTALL.md](INSTALL.md).
 
-## What if neither `~/.codex` nor `~/.claude` exists?
+## What if neither provider directory exists?
 
-The CLI can still install itself, but the badge will not reflect meaningful usage until at least one supported provider directory exists on that machine.
+The CLI can still install itself, but the badge will not reflect meaningful usage until at least one supported provider directory exists on that machine. Use `AGENT_BADGE_CODEX_DIR` or `AGENT_BADGE_CLAUDE_DIR` when the data is stored outside the default locations.
 
 ## Where is the single source of truth for commands and flags?
 

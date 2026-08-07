@@ -15,6 +15,7 @@ import {
   parseNormalizedSessionSummary,
   type NormalizedSessionSummary
 } from "../providers/session-summary.js";
+import type { ProviderDirectories } from "../providers/provider-directories.js";
 import {
   estimateSessionCostsUsdMicrosByKey,
   resolvePricingCatalog
@@ -46,6 +47,7 @@ export interface RunIncrementalRefreshOptions {
   readonly cwd: string;
   readonly agentBadgeDirectory?: string;
   readonly homeRoot: string;
+  readonly providerDirectories?: ProviderDirectories;
   readonly config: Pick<AgentBadgeConfig, "providers" | "repo" | "badge">;
   readonly state: AgentBadgeState;
   readonly forceFull: boolean;
@@ -137,7 +139,12 @@ async function mergeAttributedSessionsIntoCache(
   attributedSessions: readonly AttributedSession[],
   options: Pick<
     RunIncrementalRefreshOptions,
-    "cwd" | "agentBadgeDirectory" | "homeRoot" | "config" | "state"
+    | "cwd"
+    | "agentBadgeDirectory"
+    | "homeRoot"
+    | "providerDirectories"
+    | "config"
+    | "state"
   >
 ): Promise<RefreshCache> {
   const shouldEstimateCost =
@@ -158,6 +165,7 @@ async function mergeAttributedSessionsIntoCache(
     const estimatedCosts = await estimateSessionCostsUsdMicrosByKey({
       sessions: observationSessions,
       homeRoot: options.homeRoot,
+      codexRoot: options.providerDirectories?.codex,
       pricingCatalog
     });
 
@@ -218,7 +226,8 @@ async function resolveCwdRealPath(
 async function buildProviderCursorsFromSessions(
   homeRoot: string,
   sessions: readonly NormalizedSessionSummary[],
-  providers: readonly ProviderName[]
+  providers: readonly ProviderName[],
+  providerDirectories?: ProviderDirectories
 ): Promise<Partial<Record<ProviderName, string | null>>> {
   const providerSet = new Set(providers);
   const providerCursors: Partial<Record<ProviderName, string | null>> = {};
@@ -228,7 +237,10 @@ async function buildProviderCursorsFromSessions(
   }
 
   if (providerSet.has("claude")) {
-    providerCursors.claude = await buildClaudeIncrementalCursorFromSource(homeRoot);
+    providerCursors.claude = await buildClaudeIncrementalCursorFromSource(
+      homeRoot,
+      providerDirectories?.claude
+    );
   }
 
   return providerCursors;
@@ -241,6 +253,7 @@ async function runFullRefresh(
   const fullScan = await runFullBackfillScan({
     cwd: options.cwd,
     homeRoot: options.homeRoot,
+    providerDirectories: options.providerDirectories,
     config: options.config
   });
   const attribution = attributeBackfillSessions({
@@ -260,7 +273,8 @@ async function runFullRefresh(
     providerCursors: await buildProviderCursorsFromSessions(
       options.homeRoot,
       fullScan.sessions,
-      providers
+      providers,
+      options.providerDirectories
     ),
     cache
   };
@@ -275,6 +289,7 @@ async function runProviderIncrementalScans(
       if (provider === "codex") {
         const result = await scanCodexSessionsIncremental({
           homeRoot: options.homeRoot,
+          codexRoot: options.providerDirectories?.codex,
           cursor: options.state.checkpoints.codex.cursor
         });
 
@@ -288,6 +303,7 @@ async function runProviderIncrementalScans(
 
       const result = await scanClaudeSessionsIncremental({
         homeRoot: options.homeRoot,
+        claudeRoot: options.providerDirectories?.claude,
         cursor: options.state.checkpoints.claude.cursor
       });
 

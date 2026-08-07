@@ -107,6 +107,42 @@ describe("runInitPreflight", () => {
     }
   });
 
+  it("detects provider directories configured through the environment", async () => {
+    const repo = await createRepoFixture();
+    const providers = await createProviderFixture({ codex: false, claude: false });
+    const codexRoot = join(providers.root, "custom-codex");
+    const claudeRoot = join(providers.root, "custom-claude");
+
+    await Promise.all([
+      mkdir(codexRoot, { recursive: true }),
+      mkdir(claudeRoot, { recursive: true })
+    ]);
+
+    try {
+      const preflight = await runInitPreflight({
+        cwd: repo.root,
+        homeRoot: providers.root,
+        env: {
+          AGENT_BADGE_CODEX_DIR: codexRoot,
+          AGENT_BADGE_CLAUDE_DIR: claudeRoot
+        }
+      });
+
+      expect(preflight.providers).toEqual({
+        codex: {
+          available: true,
+          homeLabel: codexRoot
+        },
+        claude: {
+          available: true,
+          homeLabel: claudeRoot
+        }
+      });
+    } finally {
+      await Promise.all([repo.cleanup(), providers.cleanup()]);
+    }
+  });
+
   it("does not mutate a non-git directory before scaffold execution", async () => {
     const repo = await createRepoFixture({
       git: false,

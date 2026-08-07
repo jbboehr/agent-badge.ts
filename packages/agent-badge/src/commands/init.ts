@@ -25,6 +25,7 @@ import {
   publishBadgeToGist,
   resolveGitHubAuthToken,
   resolveAgentBadgePaths,
+  resolveProviderDirectories,
   runInitPreflight,
   runIncrementalRefresh,
   upsertReadmeBadge,
@@ -463,7 +464,7 @@ export async function runInitCommand(
     cwd: options.cwd,
     allowGitInit: options.allowGitInit,
     homeRoot,
-    env,
+    env: options.env,
     checker: options.checker,
     ghCliTokenResolver: options.ghCliTokenResolver
   };
@@ -630,6 +631,11 @@ export async function runInitCommand(
       cwd: preflight.cwd,
       agentBadgeDirectory: preflight.agentBadgeDirectory,
       homeRoot,
+      providerDirectories: resolveProviderDirectories({
+        cwd: preflight.cwd,
+        homeRoot,
+        env: options.env
+      }),
       config: nextPublishState.config,
       state: nextPublishState.state,
       forceFull: true

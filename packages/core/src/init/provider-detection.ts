@@ -1,9 +1,15 @@
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { resolve } from "node:path";
+
+import {
+  AGENT_BADGE_CLAUDE_DIR_ENV,
+  AGENT_BADGE_CODEX_DIR_ENV,
+  resolveProviderDirectories
+} from "../providers/provider-directories.js";
 
 export type ProviderName = "codex" | "claude";
-export type ProviderHomeLabel = "~/.codex" | "~/.claude";
+export type ProviderHomeLabel = string;
 
 export interface ProviderAvailability {
   readonly available: boolean;
@@ -16,18 +22,18 @@ export interface ProviderDetectionResult {
 }
 
 export interface DetectProviderAvailabilityOptions {
+  readonly cwd?: string;
   readonly homeRoot?: string;
+  readonly env?: NodeJS.ProcessEnv;
 }
 
 function buildProviderAvailability(
-  homeRoot: string,
-  provider: ProviderName
+  rootPath: string,
+  homeLabel: ProviderHomeLabel
 ): ProviderAvailability {
-  const directoryName = provider === "codex" ? ".codex" : ".claude";
-
   return {
-    available: existsSync(join(homeRoot, directoryName)),
-    homeLabel: `~/${directoryName}` as ProviderHomeLabel
+    available: existsSync(rootPath),
+    homeLabel
   };
 }
 
@@ -35,9 +41,25 @@ export function detectProviderAvailability(
   options: DetectProviderAvailabilityOptions = {}
 ): ProviderDetectionResult {
   const homeRoot = options.homeRoot ?? homedir();
+  const useAmbientEnvironment =
+    options.homeRoot === undefined || resolve(homeRoot) === resolve(homedir());
+  const env = options.env ?? (useAmbientEnvironment ? process.env : {});
+  const directories = resolveProviderDirectories({
+    cwd: options.cwd,
+    homeRoot,
+    env
+  });
 
   return {
-    codex: buildProviderAvailability(homeRoot, "codex"),
-    claude: buildProviderAvailability(homeRoot, "claude")
+    codex: buildProviderAvailability(
+      directories.codex,
+      env[AGENT_BADGE_CODEX_DIR_ENV]?.trim() ? directories.codex : "~/.codex"
+    ),
+    claude: buildProviderAvailability(
+      directories.claude,
+      env[AGENT_BADGE_CLAUDE_DIR_ENV]?.trim()
+        ? directories.claude
+        : "~/.claude"
+    )
   };
 }

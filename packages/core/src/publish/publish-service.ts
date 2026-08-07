@@ -4,6 +4,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import type { AttributeBackfillSessionsResult } from "../attribution/attribution-types.js";
 import type { AgentBadgeConfig } from "../config/config-schema.js";
 import type { NormalizedSessionSummary } from "../providers/session-summary.js";
+import { resolveProviderDirectories } from "../providers/provider-directories.js";
 import type { RunFullBackfillScanResult } from "../scan/full-backfill.js";
 import type {
   AgentBadgePublishFailureCode,
@@ -198,6 +199,7 @@ export async function collectIncludedTotals(
   options?: {
     readonly cwd?: string;
     readonly homeRoot?: string;
+    readonly env?: NodeJS.ProcessEnv;
     readonly includeEstimatedCost: boolean;
   }
 ): Promise<IncludedTotals> {
@@ -229,6 +231,11 @@ export async function collectIncludedTotals(
       ? await estimateIncludedCostUsdMicros({
           sessions: includedSessions,
           homeRoot: options.homeRoot,
+          codexRoot: resolveProviderDirectories({
+            cwd: options.cwd,
+            homeRoot: options.homeRoot,
+            env: options.env
+          }).codex,
           pricingCatalog: await resolvePricingCatalog({ cwd: options.cwd })
         })
       : null;

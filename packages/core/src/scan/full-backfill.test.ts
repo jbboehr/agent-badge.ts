@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import { cp, realpath } from "node:fs/promises";
+import { join } from "node:path";
 import { promisify } from "node:util";
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -351,6 +352,44 @@ describe("runFullBackfillScan", () => {
         dedupedSessions: 0
       });
       expect(result.counts.byProvider.claude.scannedSessions).toBeGreaterThan(0);
+    });
+  });
+
+  it("routes scans to configured provider directories", async () => {
+    await withBackfillFixture(async ({ providerHome, repo }) => {
+      const providerDirectories = {
+        codex: join(providerHome.homeRoot, "custom-codex"),
+        claude: join(providerHome.homeRoot, "custom-claude")
+      };
+      scanCodexSessionsMock.mockResolvedValueOnce([]);
+      scanClaudeSessionsMock.mockResolvedValueOnce([]);
+
+      await runFullBackfillScan({
+        cwd: repo.root,
+        homeRoot: providerHome.homeRoot,
+        providerDirectories,
+        config: {
+          providers: {
+            codex: { enabled: true },
+            claude: { enabled: true }
+          },
+          repo: {
+            aliases: {
+              remotes: [],
+              slugs: []
+            }
+          }
+        }
+      });
+
+      expect(scanCodexSessionsMock).toHaveBeenCalledWith({
+        homeRoot: providerHome.homeRoot,
+        codexRoot: providerDirectories.codex
+      });
+      expect(scanClaudeSessionsMock).toHaveBeenCalledWith({
+        homeRoot: providerHome.homeRoot,
+        claudeRoot: providerDirectories.claude
+      });
     });
   });
 

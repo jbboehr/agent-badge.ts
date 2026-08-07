@@ -514,7 +514,7 @@ describe("runIncrementalRefresh", () => {
     });
   });
 
-  it("persists explicit include or exclude overrides into cache entries", async () => {
+  it("routes incremental scans to configured provider directories", async () => {
     const ambiguousCodexSession = createSession({
       provider: "codex",
       providerSessionId: "codex-override",
@@ -564,6 +564,11 @@ describe("runIncrementalRefresh", () => {
     });
 
     await withTempDir(async (cwd) => {
+      const providerDirectories = {
+        codex: "/data/custom-codex",
+        claude: "/data/custom-claude"
+      };
+
       await writeRefreshCache({
         cwd,
         cache: defaultRefreshCache
@@ -572,6 +577,7 @@ describe("runIncrementalRefresh", () => {
       const result = await runIncrementalRefresh({
         cwd,
         homeRoot: "/tmp/home",
+        providerDirectories,
         config: {
           providers: defaultAgentBadgeConfig.providers,
           repo: defaultAgentBadgeConfig.repo
@@ -598,6 +604,16 @@ describe("runIncrementalRefresh", () => {
         forceFull: false
       });
 
+      expect(scanCodexSessionsIncrementalMock).toHaveBeenCalledWith({
+        homeRoot: "/tmp/home",
+        codexRoot: providerDirectories.codex,
+        cursor: "opaque-codex"
+      });
+      expect(scanClaudeSessionsIncrementalMock).toHaveBeenCalledWith({
+        homeRoot: "/tmp/home",
+        claudeRoot: providerDirectories.claude,
+        cursor: "opaque-claude"
+      });
       expect(result.cache.entries["codex:codex-override"]).toEqual(
         expect.objectContaining({
           overrideDecision: "include",

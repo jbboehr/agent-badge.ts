@@ -3,6 +3,7 @@ import { realpath } from "node:fs/promises";
 import type { AgentBadgeConfig } from "../config/config-schema.js";
 import { scanClaudeSessions } from "../providers/claude/claude-adapter.js";
 import { scanCodexSessions } from "../providers/codex/codex-adapter.js";
+import type { ProviderDirectories } from "../providers/provider-directories.js";
 import {
   parseNormalizedSessionSummary,
   type NormalizedSessionSummary
@@ -17,6 +18,7 @@ type ProviderName = NormalizedSessionSummary["provider"];
 export interface RunFullBackfillScanOptions {
   readonly cwd: string;
   readonly homeRoot: string;
+  readonly providerDirectories?: ProviderDirectories;
   readonly config: Pick<AgentBadgeConfig, "providers" | "repo">;
 }
 
@@ -81,13 +83,19 @@ export async function runFullBackfillScan(
   const providerCounts = createProviderCounts();
   const providerScans = await Promise.all([
     options.config.providers.codex.enabled
-      ? scanCodexSessions({ homeRoot: options.homeRoot }).then((sessions) => ({
+      ? scanCodexSessions({
+          homeRoot: options.homeRoot,
+          codexRoot: options.providerDirectories?.codex
+        }).then((sessions) => ({
           provider: "codex" as const,
           sessions
         }))
       : Promise.resolve(null),
     options.config.providers.claude.enabled
-      ? scanClaudeSessions({ homeRoot: options.homeRoot }).then((sessions) => ({
+      ? scanClaudeSessions({
+          homeRoot: options.homeRoot,
+          claudeRoot: options.providerDirectories?.claude
+        }).then((sessions) => ({
           provider: "claude" as const,
           sessions
         }))

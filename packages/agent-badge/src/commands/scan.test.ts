@@ -357,6 +357,41 @@ describe.sequential("runScanCommand", () => {
     }
   });
 
+  it("routes scans to provider directories configured through the environment", async () => {
+    const fixture = await createScanFixture();
+    const output = createOutputCapture();
+    const codexRoot = join(fixture.providerHome.homeRoot, "custom-codex");
+    const claudeRoot = join(fixture.providerHome.homeRoot, "custom-claude");
+
+    try {
+      runFullBackfillScanMock.mockResolvedValueOnce(
+        createScanResult(fixture.repo.root)
+      );
+
+      await runScanCommand({
+        cwd: fixture.repo.root,
+        homeRoot: fixture.providerHome.homeRoot,
+        env: {
+          AGENT_BADGE_CODEX_DIR: codexRoot,
+          AGENT_BADGE_CLAUDE_DIR: claudeRoot
+        },
+        stdout: output.writer
+      });
+
+      expect(runFullBackfillScanMock).toHaveBeenCalledWith({
+        cwd: fixture.repo.root,
+        homeRoot: fixture.providerHome.homeRoot,
+        providerDirectories: {
+          codex: codexRoot,
+          claude: claudeRoot
+        },
+        config: defaultAgentBadgeConfig
+      });
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
   it("prints Ambiguous Sessions", async () => {
     const fixture = await createScanFixture();
     const output = createOutputCapture();

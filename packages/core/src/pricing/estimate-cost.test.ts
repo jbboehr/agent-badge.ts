@@ -103,7 +103,7 @@ describe("estimateIncludedCostUsdMicros", () => {
 
   it("hydrates Codex usage from rollout token_count events", async () => {
     const homeRoot = await mkdtemp(join(tmpdir(), "agent-badge-cost-home-"));
-    const codexRoot = join(homeRoot, ".codex");
+    const codexRoot = join(homeRoot, "custom-codex");
     const rolloutPath = join(codexRoot, "rollout-test.jsonl");
     const dbPath = join(codexRoot, "state_9.sqlite");
     const sqliteModule = (await import(sqliteModuleName)) as {
@@ -195,6 +195,7 @@ describe("estimateIncludedCostUsdMicros", () => {
       const estimated = await estimateIncludedCostUsdMicros({
         sessions: [session],
         homeRoot,
+        codexRoot,
         pricingCatalog: createPricingCatalog()
       });
 

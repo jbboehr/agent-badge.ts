@@ -279,7 +279,7 @@ function checkProviders(preflight: InitPreflightResult): DoctorCheck {
       message: "No local provider data detected",
       detail: `Detected homes: codex=${codex.available ? "yes" : "no"}, claude=${claude.available ? "yes" : "no"}`,
       fix: buildFix([
-        "Enable local usage traces for at least one supported provider under ~/.codex or ~/.claude."
+        "Enable local usage traces for at least one supported provider, or configure AGENT_BADGE_CODEX_DIR or AGENT_BADGE_CLAUDE_DIR."
       ])
     };
   }
@@ -309,8 +309,10 @@ async function checkScanAccess(preflight: InitPreflightResult): Promise<DoctorCh
       id: "scan-access",
       status: "warn",
       message: "No provider directories found for scan-readiness",
-      detail: "Scan health depends on local provider usage directories under ~/.codex and ~/.claude.",
-      fix: buildFix(["Enable provider directories and rerun `agent-badge doctor`."])
+      detail: "Scan health depends on the configured local provider usage directories.",
+      fix: buildFix([
+        "Enable provider directories or set AGENT_BADGE_CODEX_DIR or AGENT_BADGE_CLAUDE_DIR, then rerun `agent-badge doctor`."
+      ])
     };
   }
 

@@ -11,6 +11,7 @@ import {
   parseAgentBadgeConfig,
   parseAgentBadgeState,
   resolveAgentBadgePaths,
+  resolveProviderDirectories,
   removeAmbiguousSessionDecision,
   runFullBackfillScan,
   appendAgentBadgeLog,
@@ -177,10 +178,16 @@ export async function runScanCommand(
 ): Promise<ScanCommandResult> {
   const cwd = resolve(options.cwd ?? process.cwd());
   const homeRoot = resolve(options.homeRoot ?? homedir());
+  const env = options.env ?? process.env;
   const stdout = options.stdout ?? process.stdout;
   const startAtMs = Date.now();
   const agentBadgePaths = resolveAgentBadgePaths({
     cwd,
+    env
+  });
+  const providerDirectories = resolveProviderDirectories({
+    cwd,
+    homeRoot,
     env: options.env
   });
   const configPath = agentBadgePaths.configPath;
@@ -192,6 +199,7 @@ export async function runScanCommand(
     const scan = await runFullBackfillScan({
       cwd,
       homeRoot,
+      providerDirectories,
       config
     });
     const initialAttribution = attributeBackfillSessions({

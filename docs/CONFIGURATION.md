@@ -23,6 +23,25 @@ The configured path may be relative to the repository or absolute, but it must r
 
 If both recognized directories exist and no override is set, `.github/agent-badge/` takes precedence. The managed `.gitignore` entries follow the resolved directory.
 
+## Provider Data Directories
+
+Codex and Claude data directories can be configured independently:
+
+```bash
+AGENT_BADGE_CODEX_DIR=/data/codex \
+AGENT_BADGE_CLAUDE_DIR=/data/claude \
+agent-badge scan
+```
+
+`AGENT_BADGE_CODEX_DIR` defaults to `~/.codex`. `AGENT_BADGE_CLAUDE_DIR`
+defaults to `~/.claude`. Absolute paths are accepted, relative paths resolve
+from the repository working directory, and paths beginning with `~/` resolve
+from the current home directory.
+
+These environment variables are read by `init`, `scan`, `publish`, `refresh`,
+and `doctor`. Keep them available to Git hooks as well if pre-push refreshes
+need the custom locations.
+
 ## Supported Keys
 
 Use `agent-badge config` or `agent-badge config get` to inspect current values, and `agent-badge config set <key> <value>` to change them.

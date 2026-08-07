@@ -8,15 +8,15 @@ Commands below are shown as `agent-badge ...` for readability. That is the defau
 
 Today the runtime supports only:
 
-- Codex data under `~/.codex`
-- Claude data under `~/.claude`
+- Codex data under `AGENT_BADGE_CODEX_DIR` or `~/.codex`
+- Claude data under `AGENT_BADGE_CLAUDE_DIR` or `~/.claude`
 
 If one provider is missing, the tool still works and reports partial coverage. If both are missing, install still works, but the badge will not show meaningful usage until provider data appears.
 
 ## The Flow
 
 1. `agent-badge init` scaffolds local state, writes a minimal repo-owned setup, and connects a public gist when GitHub auth is available.
-2. `agent-badge scan` or `agent-badge refresh` reads local provider data from `~/.codex` and `~/.claude`.
+2. `agent-badge scan` or `agent-badge refresh` reads local provider data from the configured directories, defaulting to `~/.codex` and `~/.claude`.
 3. The attribution engine decides which sessions belong to the current repo and excludes ambiguous work by default.
 4. `agent-badge` writes local state under `.agent-badge/` and publishes stable badge payloads plus deterministic shared-state files to a gist you control.
 5. Shields renders that JSON through a stable endpoint URL that can live in your README forever.

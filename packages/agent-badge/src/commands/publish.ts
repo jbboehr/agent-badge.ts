@@ -17,6 +17,7 @@ import {
   publishBadgeToGist,
   resolveGitHubAuthToken,
   resolveAgentBadgePaths,
+  resolveProviderDirectories,
   resolvePricingCatalog,
   toPublishAttemptChangedBadge,
   runFullBackfillScan,
@@ -140,6 +141,7 @@ async function buildPublisherObservations(options: {
   readonly cwd: string;
   readonly agentBadgeDirectory: string;
   readonly homeRoot: string;
+  readonly codexRoot: string;
   readonly includeEstimatedCost: boolean;
 }): Promise<SharedContributorObservationMap> {
   const estimatedCostBySessionKey = new Map<string, number>();
@@ -154,6 +156,7 @@ async function buildPublisherObservations(options: {
         (attributedSession) => attributedSession.session
       ),
       homeRoot: options.homeRoot,
+      codexRoot: options.codexRoot,
       pricingCatalog
     });
 
@@ -194,6 +197,11 @@ export async function runPublishCommand(
   const now = new Date().toISOString();
   const env = options.env ?? process.env;
   const agentBadgePaths = resolveAgentBadgePaths({ cwd, env });
+  const providerDirectories = resolveProviderDirectories({
+    cwd,
+    homeRoot,
+    env: options.env
+  });
   const configPath = agentBadgePaths.configPath;
   const statePath = agentBadgePaths.statePath;
   let previousState: AgentBadgeState | null = null;
@@ -218,6 +226,7 @@ export async function runPublishCommand(
     const scan = await runFullBackfillScan({
       cwd,
       homeRoot,
+      providerDirectories,
       config
     });
     const attribution = attributeBackfillSessions({
@@ -230,6 +239,7 @@ export async function runPublishCommand(
       cwd,
       agentBadgeDirectory: agentBadgePaths.directory,
       homeRoot,
+      codexRoot: providerDirectories.codex,
       includeEstimatedCost:
         config.badge.mode === "combined" || config.badge.mode === "cost"
     });

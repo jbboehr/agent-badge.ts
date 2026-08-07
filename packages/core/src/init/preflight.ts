@@ -136,7 +136,9 @@ export async function runInitPreflight(
       name: detectPackageManager(cwd)
     },
     providers: detectProviderAvailability({
-      homeRoot: options.homeRoot
+      cwd,
+      homeRoot: options.homeRoot,
+      env: options.env
     }),
     githubAuth,
     existingScaffold: getExistingScaffoldStatus(cwd, agentBadgeDirectory)

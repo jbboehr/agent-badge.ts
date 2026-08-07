@@ -391,6 +391,10 @@ describe("runPublishCommand", () => {
       expect(runFullBackfillScanMock).toHaveBeenCalledWith({
         cwd: fixture.repoRoot,
         homeRoot: fixture.homeRoot,
+        providerDirectories: {
+          codex: join(fixture.homeRoot, ".codex"),
+          claude: join(fixture.homeRoot, ".claude")
+        },
         config: configuredConfig
       });
       expect(attributeBackfillSessionsMock).toHaveBeenCalledWith({

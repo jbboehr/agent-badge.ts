@@ -17,10 +17,12 @@ import {
 
 export interface ScanClaudeSessionsOptions {
   readonly homeRoot: string;
+  readonly claudeRoot?: string;
 }
 
 export interface ScanClaudeSessionsIncrementalOptions {
   readonly homeRoot: string;
+  readonly claudeRoot?: string;
   readonly cursor: string | null;
 }
 
@@ -138,9 +140,10 @@ function buildClaudeIncrementalCursorFromFiles(
 }
 
 export async function buildClaudeIncrementalCursorFromSource(
-  homeRoot: string
+  homeRoot: string,
+  claudeRoot = join(homeRoot, ".claude")
 ): Promise<string> {
-  const files = await listClaudeProjectJsonlFiles(join(homeRoot, ".claude"));
+  const files = await listClaudeProjectJsonlFiles(claudeRoot);
 
   return buildClaudeIncrementalCursorFromFiles(files);
 }
@@ -255,7 +258,7 @@ function isClaudeFileChanged(
 export async function scanClaudeSessions(
   options: ScanClaudeSessionsOptions
 ): Promise<NormalizedSessionSummary[]> {
-  const claudeRoot = join(options.homeRoot, ".claude");
+  const claudeRoot = options.claudeRoot ?? join(options.homeRoot, ".claude");
   const sessions = await readClaudeProjectJsonlSessions(claudeRoot);
 
   return sessions.map(normalizeClaudeProjectSession);
@@ -263,9 +266,10 @@ export async function scanClaudeSessions(
 
 export async function scanClaudeSessionsIncremental({
   homeRoot,
+  claudeRoot: configuredClaudeRoot,
   cursor
 }: ScanClaudeSessionsIncrementalOptions): Promise<ScanClaudeSessionsIncrementalResult> {
-  const claudeRoot = join(homeRoot, ".claude");
+  const claudeRoot = configuredClaudeRoot ?? join(homeRoot, ".claude");
   const files = await listClaudeProjectJsonlFiles(claudeRoot);
   const nextCursor = buildClaudeIncrementalCursorFromFiles(files);
   const previousCursor = parseClaudeIncrementalCursor(cursor);

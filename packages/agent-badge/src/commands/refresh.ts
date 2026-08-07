@@ -22,6 +22,7 @@ import {
   publishBadgeIfChanged,
   resolveGitHubAuthToken,
   resolveAgentBadgePaths,
+  resolveProviderDirectories,
   runIncrementalRefresh,
   toPublishAttemptChangedBadge,
   writeRefreshCache,
@@ -475,6 +476,11 @@ export async function runRefreshCommand(
   const env = options.env ?? process.env;
   const startAtMs = Date.now();
   const agentBadgePaths = resolveAgentBadgePaths({ cwd, env });
+  const providerDirectories = resolveProviderDirectories({
+    cwd,
+    homeRoot,
+    env: options.env
+  });
   const configPath = agentBadgePaths.configPath;
   const statePath = agentBadgePaths.statePath;
   let persistedState: AgentBadgeState | null = null;
@@ -489,6 +495,7 @@ export async function runRefreshCommand(
       cwd,
       agentBadgeDirectory: agentBadgePaths.directory,
       homeRoot,
+      providerDirectories,
       config,
       state: previousState,
       forceFull: options.forceFull ?? false

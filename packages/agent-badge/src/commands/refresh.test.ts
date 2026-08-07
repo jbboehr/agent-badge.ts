@@ -249,6 +249,10 @@ describe("runRefreshCommand", () => {
         cwd: fixture.repoRoot,
         agentBadgeDirectory: ".agent-badge",
         homeRoot: fixture.homeRoot,
+        providerDirectories: {
+          codex: join(fixture.homeRoot, ".codex"),
+          claude: join(fixture.homeRoot, ".claude")
+        },
         config: defaultAgentBadgeConfig,
         state: defaultAgentBadgeState,
         forceFull: true

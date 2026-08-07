@@ -8,7 +8,7 @@ Before you start:
 
 - use Node `20.x`, `22.x`, or `24.x`
 - run inside an existing Git repo
-- expect meaningful results only if `~/.codex` and/or `~/.claude` exists
+- expect meaningful results only if the configured provider directories exist (`~/.codex` and `~/.claude` by default)
 
 For the complete support matrix, see [INSTALL.md](INSTALL.md).
 

@@ -17,10 +17,12 @@ import {
 
 export interface ScanCodexSessionsOptions {
   readonly homeRoot: string;
+  readonly codexRoot?: string;
 }
 
 export interface ScanCodexSessionsIncrementalOptions {
   readonly homeRoot: string;
+  readonly codexRoot?: string;
   readonly cursor: string | null;
 }
 
@@ -336,7 +338,7 @@ async function loadCodexHistoryFallback(
 export async function scanCodexSessions(
   options: ScanCodexSessionsOptions
 ): Promise<NormalizedSessionSummary[]> {
-  const codexRoot = join(options.homeRoot, ".codex");
+  const codexRoot = options.codexRoot ?? join(options.homeRoot, ".codex");
   const dbPath = await findLatestCodexStateDatabase(codexRoot);
 
   if (dbPath === null) {
@@ -356,14 +358,15 @@ export async function scanCodexSessions(
 
 export async function scanCodexSessionsIncremental({
   homeRoot,
+  codexRoot: configuredCodexRoot,
   cursor
 }: ScanCodexSessionsIncrementalOptions): Promise<ScanCodexSessionsIncrementalResult> {
   const previousCursor = parseCodexIncrementalCursor(cursor);
-  const codexRoot = join(homeRoot, ".codex");
+  const codexRoot = configuredCodexRoot ?? join(homeRoot, ".codex");
   const dbPath = await findLatestCodexStateDatabase(codexRoot);
 
   if (dbPath === null || previousCursor === null) {
-    const sessions = await scanCodexSessions({ homeRoot });
+    const sessions = await scanCodexSessions({ homeRoot, codexRoot });
 
     return {
       sessions,
@@ -389,7 +392,7 @@ export async function scanCodexSessionsIncremental({
       mode: "incremental"
     };
   } catch {
-    const sessions = await scanCodexSessions({ homeRoot });
+    const sessions = await scanCodexSessions({ homeRoot, codexRoot });
 
     return {
       sessions,

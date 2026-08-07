@@ -46,6 +46,7 @@ export interface ResolvePricingCatalogOptions {
 export interface EstimateIncludedCostOptions {
   readonly sessions: readonly NormalizedSessionSummary[];
   readonly homeRoot: string;
+  readonly codexRoot?: string;
   readonly pricingCatalog: PricingCatalog;
 }
 
@@ -761,13 +762,15 @@ async function readLatestCodexRolloutInfo(
 
 async function hydrateCodexRolloutInfoBySessionId(
   homeRoot: string,
+  configuredCodexRoot: string | undefined,
   sessionIds: readonly string[]
 ): Promise<Readonly<Record<string, CodexRolloutInfo>>> {
   if (sessionIds.length === 0) {
     return {};
   }
 
-  const dbPath = await findLatestCodexStateDatabase(join(homeRoot, ".codex"));
+  const codexRoot = configuredCodexRoot ?? join(homeRoot, ".codex");
+  const dbPath = await findLatestCodexStateDatabase(codexRoot);
 
   if (dbPath === null) {
     return {};
@@ -794,6 +797,7 @@ async function hydrateCodexRolloutInfoBySessionId(
 export async function estimateSessionCostsUsdMicrosByKey({
   sessions,
   homeRoot,
+  codexRoot,
   pricingCatalog
 }: EstimateSessionCostsOptions): Promise<Readonly<Record<string, number>>> {
   const codexSessionIds = sessions
@@ -805,6 +809,7 @@ export async function estimateSessionCostsUsdMicrosByKey({
     .map((session) => session.providerSessionId);
   const codexRolloutInfoBySessionId = await hydrateCodexRolloutInfoBySessionId(
     homeRoot,
+    codexRoot,
     codexSessionIds
   );
 
