@@ -5,10 +5,12 @@ coverage/
 artifacts/
 .agent-badge/cache/
 .agent-badge/logs/
+/tmp*
 
 .env
 *.tsbuildinfo
 .DS_Store
+.direnv
 
 # agent-badge:gitignore:start
 .agent-badge/state.json

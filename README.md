@@ -43,6 +43,26 @@ That is the quick install path: shared runtime once per machine, then in each re
 
 For full support details, use [docs/INSTALL.md](docs/INSTALL.md), [docs/QUICKSTART.md](docs/QUICKSTART.md), and [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md#shared-runtime-could-not-be-validated).
 
+### Nix flake
+
+Run the CLI directly from this fork:
+
+```bash
+nix run github:jbboehr/agent-badge.ts -- --version
+```
+
+Or use the repository checkout for development and package checks:
+
+```bash
+nix develop
+nix flake check
+```
+
+On Linux, the default `agent-badge` package uses Bubblewrap to expose only the
+project files and provider history needed by each command. The
+`agent-badge-unwrapped` package is also available explicitly and is the default
+on Darwin, where Bubblewrap is unavailable.
+
 ## What Gets Published
 
 `agent-badge` publishes aggregate badge JSON and shared metadata only.
