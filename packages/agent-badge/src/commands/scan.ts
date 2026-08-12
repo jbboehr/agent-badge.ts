@@ -11,6 +11,7 @@ import {
   parseAgentBadgeConfig,
   parseAgentBadgeState,
   resolveAgentBadgePaths,
+  resolveHomeNormalization,
   resolveProviderDirectories,
   removeAmbiguousSessionDecision,
   runFullBackfillScan,
@@ -179,6 +180,7 @@ export async function runScanCommand(
   const cwd = resolve(options.cwd ?? process.cwd());
   const homeRoot = resolve(options.homeRoot ?? homedir());
   const env = options.env ?? process.env;
+  const homeNormalization = resolveHomeNormalization(env);
   const stdout = options.stdout ?? process.stdout;
   const startAtMs = Date.now();
   const agentBadgePaths = resolveAgentBadgePaths({
@@ -205,7 +207,9 @@ export async function runScanCommand(
     const initialAttribution = attributeBackfillSessions({
       repo: scan.repo,
       sessions: scan.sessions,
-      overrides: previousState.overrides.ambiguousSessions
+      overrides: previousState.overrides.ambiguousSessions,
+      homeRoot,
+      homeNormalization
     });
     const requestedOverrides = applyRequestedOverrides(
       previousState,
@@ -218,7 +222,9 @@ export async function runScanCommand(
         : attributeBackfillSessions({
             repo: scan.repo,
             sessions: scan.sessions,
-            overrides: requestedOverrides.nextState.overrides.ambiguousSessions
+            overrides: requestedOverrides.nextState.overrides.ambiguousSessions,
+            homeRoot,
+            homeNormalization
           });
     const report = formatScanReport(
       buildReportInput(scan, attribution, requestedOverrides.overrideActions)

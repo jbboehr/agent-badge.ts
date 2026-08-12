@@ -44,6 +44,31 @@ These environment variables are read by `init`, `scan`, `publish`, `refresh`,
 and `doctor`. Keep them available to Git hooks as well if pre-push refreshes
 need the custom locations.
 
+## Home-relative Repository Matching
+
+Repository-path attribution is home-relative by default. This lets sessions
+recorded inside a sandbox, container, or another machine match the current
+checkout when only the user-home prefix differs. For example,
+`/home/sandbox/Code/example` and `/Users/alex/Code/example` both normalize to
+`Code/example`.
+
+Exact canonical paths and matching Git remotes still take priority. An exact
+home-relative repository match is included unless a recorded Git remote points
+to another repository. A working directory below that repository and a
+remote-conflicting match remain ambiguous and are not counted automatically. A
+bare home directory is not matchable. Absolute paths remain local and are not
+added to config, cache, logs, or published data; the refresh cache stores only
+an opaque digest so it can invalidate attribution when the current home changes.
+
+Set `AGENT_BADGE_HOME_NORMALIZATION=0` (or `false`) to disable this behavior:
+
+```bash
+AGENT_BADGE_HOME_NORMALIZATION=0 agent-badge scan
+```
+
+The accepted values are `1`, `true`, `0`, and `false`. If the variable is used
+with hook-triggered refreshes, keep it available to the Git hook environment.
+
 ## Supported Keys
 
 Use `agent-badge config` or `agent-badge config get` to inspect current values, and `agent-badge config set <key> <value>` to change them.

@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { parseNormalizedSessionSummary } from "../providers/session-summary.js";
+import { buildHomeNormalizationContextDigest } from "../attribution/home-normalization.js";
 import {
   REFRESH_CACHE_FILE,
   buildRefreshCacheEntry,
@@ -74,6 +75,10 @@ describe("refresh-cache", () => {
       const session = createSession();
       const cache = {
         ...defaultRefreshCache,
+        homeNormalizationContextDigest: buildHomeNormalizationContextDigest(
+          "/Users/example",
+          true
+        ),
         entries: {
           [buildRefreshCacheKey(session)]: buildRefreshCacheEntry({
             session,
@@ -90,7 +95,11 @@ describe("refresh-cache", () => {
       const serialized = await readFile(cachePath, "utf8");
 
       expect(await readRefreshCache({ cwd })).toEqual(cache);
-      expect(serialized).toContain('"version": 2');
+      expect(serialized).toContain('"version": 3');
+      expect(serialized).toContain('"homeNormalization": true');
+      expect(serialized).toMatch(
+        /"homeNormalizationContextDigest": "[0-9a-f]{64}"/
+      );
       expect(serialized).toContain('"tokens": 42');
       expect(serialized).not.toContain("/Users/example/project");
       expect(serialized).not.toContain("observedRemoteUrl");
@@ -116,7 +125,7 @@ describe("refresh-cache", () => {
           join(cwd, agentBadgeDirectory, "cache/session-index.json"),
           "utf8"
         )
-      ).toContain('"version": 2');
+      ).toContain('"version": 3');
     });
   });
 
@@ -127,7 +136,12 @@ describe("refresh-cache", () => {
       await mkdir(join(cwd, ".agent-badge", "cache"), { recursive: true });
       await writeFile(
         cachePath,
-        `${JSON.stringify({ version: 2, entries: {} })}\n`,
+        `${JSON.stringify({
+          version: 3,
+          homeNormalization: true,
+          homeNormalizationContextDigest: null,
+          entries: {}
+        })}\n`,
         "utf8"
       );
 
@@ -165,7 +179,9 @@ describe("refresh-cache", () => {
         cachePath,
         JSON.stringify(
           {
-            version: 2,
+            version: 3,
+            homeNormalization: true,
+            homeNormalizationContextDigest: null,
             entries: {
               "codex:session-1": {
                 provider: "codex",

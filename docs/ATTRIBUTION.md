@@ -6,9 +6,16 @@
 
 The attribution engine applies evidence in this strict order:
 
-`exact repo root -> exact remote -> normalized cwd -> transcript correlation -> persisted include override`
+`exact repo root -> exact remote -> exact home-relative cwd -> nested cwd -> transcript correlation -> persisted include override`
 
 The important part is not the number of signals. It is the order. Strong evidence gets first say. Weak hints do not get to inflate the badge.
+
+Home-relative matching is enabled by default so sessions created in sandboxes,
+containers, or another user home can follow a checkout whose path below the
+home directory is unchanged. Set `AGENT_BADGE_HOME_NORMALIZATION=0` to disable
+it. Exact home-relative matches are included unless a recorded Git remote
+contradicts the current repository; nested and remote-conflicting matches remain
+ambiguous. A bare home directory is never treated as repository identity.
 
 ## Session Outcomes
 

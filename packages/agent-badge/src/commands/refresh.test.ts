@@ -217,7 +217,9 @@ describe("runRefreshCommand", () => {
         claude: "claude-cursor-next"
       },
       cache: {
-        version: 2 as const,
+        version: 3 as const,
+        homeNormalization: true,
+        homeNormalizationContextDigest: null,
         costsComputed: false,
         entries: {
           "codex:session-1": {
@@ -257,7 +259,8 @@ describe("runRefreshCommand", () => {
         },
         config: defaultAgentBadgeConfig,
         state: defaultAgentBadgeState,
-        forceFull: true
+        forceFull: true,
+        homeNormalization: true
       });
       expect(publishBadgeIfChangedMock).not.toHaveBeenCalled();
       expect(persistedState.refresh).toEqual({
@@ -337,7 +340,9 @@ describe("runRefreshCommand", () => {
         claude: "claude-next"
       },
       cache: {
-        version: 2 as const,
+        version: 3 as const,
+        homeNormalization: true,
+        homeNormalizationContextDigest: null,
         costsComputed: false,
         entries: {
           "codex:shared-session": {
@@ -486,7 +491,10 @@ describe("runRefreshCommand", () => {
         claude: "claude-next"
       },
       cache: {
-        version: 2 as const,
+        version: 3 as const,
+        homeNormalization: true,
+        homeNormalizationContextDigest: null,
+        costsComputed: false,
         entries: {}
       }
     };
@@ -555,7 +563,10 @@ describe("runRefreshCommand", () => {
         claude: "claude-next"
       },
       cache: {
-        version: 2 as const,
+        version: 3 as const,
+        homeNormalization: true,
+        homeNormalizationContextDigest: null,
+        costsComputed: false,
         entries: {}
       }
     };
@@ -623,7 +634,10 @@ describe("runRefreshCommand", () => {
         claude: "claude-next"
       },
       cache: {
-        version: 2 as const,
+        version: 3 as const,
+        homeNormalization: true,
+        homeNormalizationContextDigest: null,
+        costsComputed: false,
         entries: {}
       }
     });
@@ -687,7 +701,10 @@ describe("runRefreshCommand", () => {
         claude: "claude-next"
       },
       cache: {
-        version: 2 as const,
+        version: 3 as const,
+        homeNormalization: true,
+        homeNormalizationContextDigest: null,
+        costsComputed: false,
         entries: {}
       }
     });
@@ -753,7 +770,10 @@ describe("runRefreshCommand", () => {
         claude: "claude-next"
       },
       cache: {
-        version: 2 as const,
+        version: 3 as const,
+        homeNormalization: true,
+        homeNormalizationContextDigest: null,
+        costsComputed: false,
         entries: {}
       }
     });
@@ -821,7 +841,10 @@ describe("runRefreshCommand", () => {
         claude: "claude-next"
       },
       cache: {
-        version: 2 as const,
+        version: 3 as const,
+        homeNormalization: true,
+        homeNormalizationContextDigest: null,
+        costsComputed: false,
         entries: {}
       }
     });
@@ -899,7 +922,10 @@ describe("runRefreshCommand", () => {
         claude: "claude-next"
       },
       cache: {
-        version: 2 as const,
+        version: 3 as const,
+        homeNormalization: true,
+        homeNormalizationContextDigest: null,
+        costsComputed: false,
         entries: {}
       }
     };
@@ -970,7 +996,10 @@ describe("runRefreshCommand", () => {
         claude: "claude-parity"
       },
       cache: {
-        version: 2 as const,
+        version: 3 as const,
+        homeNormalization: true,
+        homeNormalizationContextDigest: null,
+        costsComputed: false,
         entries: {
           "codex:shared-session": {
             provider: "codex" as const,
@@ -1069,7 +1098,10 @@ describe("runRefreshCommand", () => {
         claude: "claude-concise"
       },
       cache: {
-        version: 2 as const,
+        version: 3 as const,
+        homeNormalization: true,
+        homeNormalizationContextDigest: null,
+        costsComputed: false,
         entries: {}
       }
     };
@@ -1150,7 +1182,9 @@ describe("runRefreshCommand", () => {
         claude: "claude-migrate"
       },
       cache: {
-        version: 2 as const,
+        version: 3 as const,
+        homeNormalization: true,
+        homeNormalizationContextDigest: null,
         costsComputed: false,
         entries: {
           "codex:session-9": {
@@ -1254,7 +1288,10 @@ describe("runRefreshCommand", () => {
         claude: "claude-repair"
       },
       cache: {
-        version: 2 as const,
+        version: 3 as const,
+        homeNormalization: true,
+        homeNormalizationContextDigest: null,
+        costsComputed: false,
         entries: {}
       }
     };
@@ -1336,7 +1373,9 @@ describe("runRefreshCommand", () => {
         claude: "claude-fresh"
       },
       cache: {
-        version: 2 as const,
+        version: 3 as const,
+        homeNormalization: true,
+        homeNormalizationContextDigest: null,
         costsComputed: false,
         entries: {
           "codex:session-9": {
@@ -1438,7 +1477,10 @@ describe("runRefreshCommand", () => {
         claude: "claude-strict"
       },
       cache: {
-        version: 2 as const,
+        version: 3 as const,
+        homeNormalization: true,
+        homeNormalizationContextDigest: null,
+        costsComputed: false,
         entries: {}
       }
     };
@@ -1515,7 +1557,10 @@ describe("runRefreshCommand", () => {
         claude: "claude-strict-ready"
       },
       cache: {
-        version: 2 as const,
+        version: 3 as const,
+        homeNormalization: true,
+        homeNormalizationContextDigest: null,
+        costsComputed: false,
         entries: {}
       }
     });

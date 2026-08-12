@@ -17,6 +17,7 @@ import {
   publishBadgeToGist,
   resolveGitHubAuthToken,
   resolveAgentBadgePaths,
+  resolveHomeNormalization,
   resolveProviderDirectories,
   resolvePricingCatalog,
   toPublishAttemptChangedBadge,
@@ -198,6 +199,7 @@ export async function runPublishCommand(
   const startAtMs = Date.now();
   const now = new Date().toISOString();
   const env = options.env ?? process.env;
+  const homeNormalization = resolveHomeNormalization(env);
   const agentBadgePaths = resolveAgentBadgePaths({ cwd, env });
   const providerDirectories = resolveProviderDirectories({
     cwd,
@@ -234,7 +236,9 @@ export async function runPublishCommand(
     const attribution = attributeBackfillSessions({
       repo: scan.repo,
       sessions: scan.sessions,
-      overrides: previousState.overrides.ambiguousSessions
+      overrides: previousState.overrides.ambiguousSessions,
+      homeRoot,
+      homeNormalization
     });
     const publisherObservations = await buildPublisherObservations({
       attribution,

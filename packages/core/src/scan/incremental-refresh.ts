@@ -1,6 +1,7 @@
 import { realpath } from "node:fs/promises";
 
 import { attributeBackfillSessions } from "../attribution/attribution-engine.js";
+import { buildHomeNormalizationContextDigest } from "../attribution/home-normalization.js";
 import type { AttributedSession } from "../attribution/attribution-types.js";
 import type { AgentBadgeConfig } from "../config/config-schema.js";
 import {
@@ -56,6 +57,7 @@ export interface RunIncrementalRefreshOptions {
   readonly config: Pick<AgentBadgeConfig, "providers" | "repo" | "badge">;
   readonly state: AgentBadgeState;
   readonly forceFull: boolean;
+  readonly homeNormalization?: boolean;
 }
 
 export interface RunIncrementalRefreshResult {
@@ -159,6 +161,7 @@ async function mergeAttributedSessionsIntoCache(
     | "providerDirectories"
     | "config"
     | "state"
+    | "homeNormalization"
   >
 ): Promise<RefreshCache> {
   const shouldEstimateCost =
@@ -190,6 +193,11 @@ async function mergeAttributedSessionsIntoCache(
 
   return {
     ...cache,
+    homeNormalization: options.homeNormalization ?? true,
+    homeNormalizationContextDigest: buildHomeNormalizationContextDigest(
+      options.homeRoot,
+      options.homeNormalization ?? true
+    ),
     costsComputed: shouldEstimateCost,
     entries: attributedSessions.reduce(
       (entries, attributedSession) => {
@@ -281,7 +289,9 @@ async function runFullRefresh(
   const attribution = attributeBackfillSessions({
     repo: fullScan.repo,
     sessions: fullScan.sessions,
-    overrides: options.state.overrides.ambiguousSessions
+    overrides: options.state.overrides.ambiguousSessions,
+    homeRoot: options.homeRoot,
+    homeNormalization: options.homeNormalization ?? true
   });
   const cache = await mergeAttributedSessionsIntoCache(
     defaultRefreshCache,
@@ -363,6 +373,9 @@ export async function runIncrementalRefresh(
   options: RunIncrementalRefreshOptions
 ): Promise<RunIncrementalRefreshResult> {
   const providers = enabledProviders(options.config);
+  const homeNormalization = options.homeNormalization ?? true;
+  const homeNormalizationContextDigest =
+    buildHomeNormalizationContextDigest(options.homeRoot, homeNormalization);
 
   if (options.forceFull || providers.length === 0) {
     return runFullRefresh(options, providers);
@@ -380,6 +393,13 @@ export async function runIncrementalRefresh(
   }
 
   if (cache === null) {
+    return runFullRefresh(options, providers);
+  }
+
+  if (
+    cache.homeNormalization !== homeNormalization ||
+    cache.homeNormalizationContextDigest !== homeNormalizationContextDigest
+  ) {
     return runFullRefresh(options, providers);
   }
 
@@ -436,7 +456,9 @@ export async function runIncrementalRefresh(
   const attribution = attributeBackfillSessions({
     repo,
     sessions: changedSessions,
-    overrides: options.state.overrides.ambiguousSessions
+    overrides: options.state.overrides.ambiguousSessions,
+    homeRoot: options.homeRoot,
+    homeNormalization: options.homeNormalization ?? true
   });
   const nextCache = await mergeAttributedSessionsIntoCache(
     cache,

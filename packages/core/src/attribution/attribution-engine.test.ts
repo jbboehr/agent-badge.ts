@@ -158,6 +158,117 @@ describe("attributeBackfillSessions", () => {
     ]);
   });
 
+  it("includes sessions whose cwd matches the repo relative to different homes", () => {
+    const homeRelativeRepo = createRepoFingerprint({
+      gitRoot: "/home/rin/Code/agent-badge",
+      gitRootRealPath: "/home/rin/Code/agent-badge"
+    });
+    const session = createSession({
+      provider: "claude",
+      providerSessionId: "bubblewrap-review",
+      cwd: "/home/sandbox/Code/agent-badge",
+      attributionHints: {
+        cwdRealPath: null,
+        transcriptProjectKey: "-home-sandbox-Code-agent-badge"
+      }
+    });
+
+    const result = attributeBackfillSessions({
+      repo: homeRelativeRepo,
+      sessions: [session],
+      overrides: {},
+      homeRoot: "/home/rin"
+    });
+
+    expect(result.sessions[0]).toMatchObject({
+      status: "included",
+      reason: "Included because cwd matches the repo root relative to the user home"
+    });
+    expect(result.sessions[0]?.evidence).toContainEqual({
+      kind: "home-relative-cwd",
+      matched: true,
+      detail: "cwd and repo root match after removing their user-home prefixes"
+    });
+  });
+
+  it("keeps home-relative matches ambiguous when the Git remote conflicts", () => {
+    const homeRelativeRepo = createRepoFingerprint({
+      gitRoot: "/home/rin/Code/agent-badge",
+      gitRootRealPath: "/home/rin/Code/agent-badge"
+    });
+    const session = createSession({
+      provider: "claude",
+      providerSessionId: "conflicting-remote",
+      cwd: "/home/sandbox/Code/agent-badge",
+      observedRemoteUrlNormalized: "https://github.com/other/project"
+    });
+
+    const result = attributeBackfillSessions({
+      repo: homeRelativeRepo,
+      sessions: [session],
+      overrides: {},
+      homeRoot: "/home/rin"
+    });
+
+    expect(result.sessions[0]).toMatchObject({
+      status: "ambiguous",
+      reason:
+        "Ambiguous because home-relative cwd matched but the Git remote points away from the current repo"
+    });
+    expect(result.sessions[0]?.evidence).toContainEqual(
+      expect.objectContaining({ kind: "git-remote", matched: false })
+    );
+  });
+
+  it("keeps home-relative nested cwd evidence ambiguous", () => {
+    const homeRelativeRepo = createRepoFingerprint({
+      gitRoot: "/Users/rin/Code/agent-badge",
+      gitRootRealPath: "/Users/rin/Code/agent-badge"
+    });
+    const session = createSession({
+      provider: "claude",
+      providerSessionId: "bubblewrap-subdirectory",
+      cwd: "/home/sandbox/Code/agent-badge/packages/core"
+    });
+
+    const result = attributeBackfillSessions({
+      repo: homeRelativeRepo,
+      sessions: [session],
+      overrides: {},
+      homeRoot: "/Users/rin"
+    });
+
+    expect(result.sessions[0]).toMatchObject({
+      status: "ambiguous",
+      reason: "Ambiguous because only weak evidence matched the current repo"
+    });
+  });
+
+  it("can disable home-relative matching", () => {
+    const homeRelativeRepo = createRepoFingerprint({
+      gitRoot: "/home/rin/Code/agent-badge",
+      gitRootRealPath: "/home/rin/Code/agent-badge"
+    });
+    const session = createSession({
+      provider: "claude",
+      providerSessionId: "home-normalization-disabled",
+      cwd: "/home/sandbox/Code/agent-badge"
+    });
+
+    const result = attributeBackfillSessions({
+      repo: homeRelativeRepo,
+      sessions: [session],
+      overrides: {},
+      homeRoot: "/home/rin",
+      homeNormalization: false
+    });
+
+    expect(result.sessions[0]?.status).toBe("excluded");
+    expect(result.sessions[0]?.evidence).not.toContainEqual(
+      expect.objectContaining({ kind: "home-relative-cwd" })
+    );
+  });
+
   it("marks ambiguous sessions excluded from included totals", () => {
     const includedSession = createSession({
       provider: "codex",

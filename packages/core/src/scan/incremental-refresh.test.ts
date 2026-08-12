@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { defaultAgentBadgeConfig } from "../config/config-schema.js";
+import { buildHomeNormalizationContextDigest } from "../attribution/home-normalization.js";
 import {
   parseNormalizedSessionSummary,
   type NormalizedSessionSummary
@@ -96,6 +97,20 @@ const defaultTestProviders = {
   ...defaultAgentBadgeConfig.providers,
   grok: { enabled: false }
 };
+
+function refreshCacheForHome(
+  homeRoot: string,
+  homeNormalization = true
+) {
+  return {
+    ...defaultRefreshCache,
+    homeNormalization,
+    homeNormalizationContextDigest: buildHomeNormalizationContextDigest(
+      homeRoot,
+      homeNormalization
+    )
+  };
+}
 
 function createSession(
   overrides: Partial<NormalizedSessionSummary> &
@@ -330,6 +345,92 @@ describe("runIncrementalRefresh", () => {
     });
   });
 
+  it.each([
+    {
+      label: "mode",
+      cachedHome: "/tmp/home",
+      cachedEnabled: true,
+      currentHome: "/tmp/home",
+      currentEnabled: false
+    },
+    {
+      label: "home",
+      cachedHome: "/tmp/old-home",
+      cachedEnabled: true,
+      currentHome: "/tmp/home",
+      currentEnabled: true
+    }
+  ])(
+    "falls back to a full scan when home normalization $label changes",
+    async ({ cachedHome, cachedEnabled, currentHome, currentEnabled }) => {
+      const session = createSession({
+        provider: "codex",
+        providerSessionId: "home-mode-change",
+        tokenUsage: { total: 42 }
+      });
+      runFullBackfillScanMock.mockResolvedValue({
+        repo: createRepoFingerprint(),
+        sessions: [session],
+        scannedProviders: ["codex"],
+        counts: {
+          scannedSessions: 1,
+          dedupedSessions: 1,
+          byProvider: {
+            codex: { scannedSessions: 1, dedupedSessions: 1 },
+            claude: { scannedSessions: 0, dedupedSessions: 0 },
+            grok: { scannedSessions: 0, dedupedSessions: 0 }
+          }
+        }
+      });
+      attributeBackfillSessionsMock.mockReturnValue({
+        sessions: [createAttributedSession(session, "included")],
+        counts: { included: 1, ambiguous: 0, excluded: 0 }
+      });
+
+      await withTempDir(async (cwd) => {
+        await writeRefreshCache({
+          cwd,
+          cache: {
+            ...refreshCacheForHome(cachedHome, cachedEnabled)
+          }
+        });
+
+        const result = await runIncrementalRefresh({
+          cwd,
+          homeRoot: currentHome,
+          config: {
+            providers: {
+              codex: { enabled: true },
+              claude: { enabled: false },
+              grok: { enabled: false }
+            },
+            repo: defaultAgentBadgeConfig.repo
+          },
+          state: {
+            ...defaultAgentBadgeState,
+            checkpoints: {
+              ...defaultAgentBadgeState.checkpoints,
+              codex: {
+                cursor: "opaque-codex",
+                lastScannedAt: "2026-03-30T11:00:00Z"
+              }
+            }
+          },
+          forceFull: false,
+          homeNormalization: currentEnabled
+        });
+
+        expect(runFullBackfillScanMock).toHaveBeenCalledOnce();
+        expect(scanCodexSessionsIncrementalMock).not.toHaveBeenCalled();
+        expect(result.scanMode).toBe("full");
+        expect(result.cache.homeNormalization).toBe(currentEnabled);
+        expect(result.cache.homeNormalizationContextDigest).toBe(
+          buildHomeNormalizationContextDigest(currentHome, currentEnabled)
+        );
+      });
+    }
+  );
+
   it("falls back to a full scan when a persisted override was removed", async () => {
     const session = createSession({
       provider: "codex",
@@ -376,7 +477,7 @@ describe("runIncrementalRefresh", () => {
       await writeRefreshCache({
         cwd,
         cache: {
-          ...defaultRefreshCache,
+          ...refreshCacheForHome("/tmp/home"),
           entries: {
             [buildRefreshCacheKey(session)]: buildRefreshCacheEntry({
               session,
@@ -477,7 +578,7 @@ describe("runIncrementalRefresh", () => {
       await writeRefreshCache({
         cwd,
         cache: {
-          ...defaultRefreshCache,
+          ...refreshCacheForHome("/tmp/home"),
           entries: {
             [buildRefreshCacheKey(changedCodexSession)]: buildRefreshCacheEntry({
               session: {
@@ -621,7 +722,7 @@ describe("runIncrementalRefresh", () => {
 
       await writeRefreshCache({
         cwd,
-        cache: defaultRefreshCache
+        cache: refreshCacheForHome("/tmp/home")
       });
 
       const result = await runIncrementalRefresh({
@@ -717,7 +818,7 @@ describe("runIncrementalRefresh", () => {
       await writeRefreshCache({
         cwd,
         cache: {
-          ...defaultRefreshCache,
+          ...refreshCacheForHome("/tmp/home"),
           entries: {
             [buildRefreshCacheKey(promotedSession)]: buildRefreshCacheEntry({
               session: promotedSession,
@@ -837,7 +938,7 @@ describe("runIncrementalRefresh", () => {
       await writeRefreshCache({
         cwd,
         cache: {
-          ...defaultRefreshCache,
+          ...refreshCacheForHome("/tmp/home"),
           entries: {
             [buildRefreshCacheKey(incrementalSession)]: buildRefreshCacheEntry({
               session: incrementalSession,
@@ -962,7 +1063,7 @@ describe("runIncrementalRefresh", () => {
       await writeRefreshCache({
         cwd,
         cache: {
-          ...defaultRefreshCache,
+          ...refreshCacheForHome(cwd),
           entries: {
             "grok:grok-1": buildRefreshCacheEntry({
               session: cachedSession,

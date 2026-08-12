@@ -22,6 +22,7 @@ import {
   publishBadgeIfChanged,
   resolveGitHubAuthToken,
   resolveAgentBadgePaths,
+  resolveHomeNormalization,
   resolveProviderDirectories,
   runIncrementalRefresh,
   toPublishAttemptChangedBadge,
@@ -474,6 +475,7 @@ export async function runRefreshCommand(
   const homeRoot = resolve(options.homeRoot ?? homedir());
   const stdout = options.stdout ?? process.stdout;
   const env = options.env ?? process.env;
+  const homeNormalization = resolveHomeNormalization(env);
   const startAtMs = Date.now();
   const agentBadgePaths = resolveAgentBadgePaths({ cwd, env });
   const providerDirectories = resolveProviderDirectories({
@@ -498,7 +500,8 @@ export async function runRefreshCommand(
       providerDirectories,
       config,
       state: previousState,
-      forceFull: options.forceFull ?? false
+      forceFull: options.forceFull ?? false,
+      homeNormalization
     });
     const now = new Date().toISOString();
     persistedState = applyRefreshResultToState({

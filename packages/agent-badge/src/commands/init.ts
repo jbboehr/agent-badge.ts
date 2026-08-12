@@ -25,6 +25,7 @@ import {
   publishBadgeToGist,
   resolveGitHubAuthToken,
   resolveAgentBadgePaths,
+  resolveHomeNormalization,
   resolveProviderDirectories,
   runInitPreflight,
   runIncrementalRefresh,
@@ -640,7 +641,8 @@ export async function runInitCommand(
       }),
       config: nextPublishState.config,
       state: nextPublishState.state,
-      forceFull: true
+      forceFull: true,
+      homeNormalization: resolveHomeNormalization(env)
     });
     const refreshedState = applyRefreshResultToState({
       previousState: nextPublishState.state,

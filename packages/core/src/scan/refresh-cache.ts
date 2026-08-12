@@ -29,7 +29,12 @@ const refreshCacheEntrySchema = z
 
 const refreshCacheSchema = z
   .object({
-    version: z.literal(2),
+    version: z.literal(3),
+    homeNormalization: z.boolean(),
+    homeNormalizationContextDigest: z
+      .string()
+      .regex(/^[0-9a-f]{64}$/)
+      .nullable(),
     costsComputed: z.boolean().optional().default(false),
     entries: z.record(z.string(), refreshCacheEntrySchema)
   })
@@ -72,7 +77,9 @@ export interface BuildRefreshCacheEntryOptions {
 }
 
 export const defaultRefreshCache: RefreshCache = {
-  version: 2,
+  version: 3,
+  homeNormalization: true,
+  homeNormalizationContextDigest: null,
   costsComputed: false,
   entries: {}
 };

@@ -7,12 +7,15 @@ import type {
   AttributionEvidence,
   AttributeBackfillSessionsResult
 } from "./attribution-types.js";
+import { resolveHomeRelativePath } from "./home-normalization.js";
 import { buildAmbiguousSessionKey } from "./override-store.js";
 
 export interface AttributeBackfillSessionsOptions {
   readonly repo: RepoFingerprint;
   readonly sessions: readonly NormalizedSessionSummary[];
   readonly overrides: Record<string, "include" | "exclude">;
+  readonly homeRoot?: string;
+  readonly homeNormalization?: boolean;
 }
 
 function buildClaudeProjectKey(realPath: string): string {
@@ -56,6 +59,36 @@ function matchesNormalizedCwd(
   );
 }
 
+function getHomeRelativeCwdMatch(
+  session: NormalizedSessionSummary,
+  repo: RepoFingerprint,
+  homeRoot: string | undefined,
+  enabled: boolean
+): "exact" | "nested" | "none" | "unavailable" {
+  if (!enabled || session.cwd === null) {
+    return "unavailable";
+  }
+
+  const sessionPath = resolveHomeRelativePath(session.cwd, homeRoot);
+  const repoPaths = [repo.gitRootRealPath, repo.gitRoot]
+    .map((path) => resolveHomeRelativePath(path, homeRoot))
+    .filter((path): path is string => path !== null);
+
+  if (sessionPath === null || repoPaths.length === 0) {
+    return "unavailable";
+  }
+
+  if (repoPaths.includes(sessionPath)) {
+    return "exact";
+  }
+
+  if (repoPaths.some((repoPath) => sessionPath.startsWith(`${repoPath}/`))) {
+    return "nested";
+  }
+
+  return "none";
+}
+
 function matchesTranscriptCorrelation(
   session: NormalizedSessionSummary,
   repo: RepoFingerprint
@@ -71,19 +104,34 @@ function matchesTranscriptCorrelation(
 
 function buildEvidence(
   session: NormalizedSessionSummary,
-  repo: RepoFingerprint
+  repo: RepoFingerprint,
+  homeRoot: string | undefined,
+  homeNormalization: boolean
 ): {
   evidence: AttributionEvidence[];
   repoRootMatched: boolean;
   gitRemoteMatched: boolean;
   normalizedCwdMatched: boolean;
+  homeRelativeCwdMatch: "exact" | "nested" | "none" | "unavailable";
   transcriptMatched: boolean;
+  gitRemoteConflicted: boolean;
   hasConflictingWeakEvidence: boolean;
 } {
   const evidence: AttributionEvidence[] = [];
   const repoRootMatched = matchesRepoRoot(session, repo);
   const gitRemoteMatched = matchesGitRemote(session, repo);
+  const gitRemoteConflicted =
+    session.observedRemoteUrlNormalized !== null &&
+    !gitRemoteMatched &&
+    (repo.originUrlNormalized !== null ||
+      repo.aliasRemoteUrlsNormalized.length > 0);
   const normalizedCwdMatched = matchesNormalizedCwd(session, repo);
+  const homeRelativeCwdMatch = getHomeRelativeCwdMatch(
+    session,
+    repo,
+    homeRoot,
+    homeNormalization
+  );
   const transcriptMatched = matchesTranscriptCorrelation(session, repo);
 
   if (session.attributionHints.cwdRealPath !== null && repoRootMatched) {
@@ -101,6 +149,20 @@ function buildEvidence(
       detail: gitRemoteMatched
         ? "observedRemoteUrlNormalized matches repo.originUrlNormalized or an alias remote"
         : "observedRemoteUrlNormalized does not match repo.originUrlNormalized or any alias remote"
+    });
+  }
+
+  if (homeRelativeCwdMatch !== "unavailable") {
+    evidence.push({
+      kind: "home-relative-cwd",
+      matched:
+        homeRelativeCwdMatch === "exact" || homeRelativeCwdMatch === "nested",
+      detail:
+        homeRelativeCwdMatch === "exact"
+          ? "cwd and repo root match after removing their user-home prefixes"
+          : homeRelativeCwdMatch === "nested"
+            ? "cwd is nested beneath the repo after removing their user-home prefixes"
+            : "cwd does not match the repo after removing their user-home prefixes"
     });
   }
 
@@ -129,7 +191,9 @@ function buildEvidence(
     repoRootMatched,
     gitRemoteMatched,
     normalizedCwdMatched,
+    homeRelativeCwdMatch,
     transcriptMatched,
+    gitRemoteConflicted,
     hasConflictingWeakEvidence:
       (normalizedCwdMatched &&
         session.attributionHints.transcriptProjectKey !== null &&
@@ -143,16 +207,20 @@ function buildEvidence(
 
 function determineRawDecision(
   session: NormalizedSessionSummary,
-  repo: RepoFingerprint
+  repo: RepoFingerprint,
+  homeRoot: string | undefined,
+  homeNormalization: boolean
 ): Omit<AttributedSession, "session" | "overrideApplied"> {
   const {
     evidence,
     repoRootMatched,
     gitRemoteMatched,
     normalizedCwdMatched,
+    homeRelativeCwdMatch,
     transcriptMatched,
+    gitRemoteConflicted,
     hasConflictingWeakEvidence
-  } = buildEvidence(session, repo);
+  } = buildEvidence(session, repo, homeRoot, homeNormalization);
 
   if (repoRootMatched) {
     return {
@@ -171,7 +239,29 @@ function determineRawDecision(
     };
   }
 
-  if (normalizedCwdMatched || transcriptMatched) {
+  if (homeRelativeCwdMatch === "exact") {
+    if (gitRemoteConflicted) {
+      return {
+        status: "ambiguous",
+        evidence,
+        reason:
+          "Ambiguous because home-relative cwd matched but the Git remote points away from the current repo"
+      };
+    }
+
+    return {
+      status: "included",
+      evidence,
+      reason:
+        "Included because cwd matches the repo root relative to the user home"
+    };
+  }
+
+  if (
+    normalizedCwdMatched ||
+    homeRelativeCwdMatch === "nested" ||
+    transcriptMatched
+  ) {
     return {
       status: "ambiguous",
       evidence,
@@ -237,7 +327,12 @@ export function attributeBackfillSessions(
   const sessions = options.sessions.map((session) => {
     const attributedSession = applyOverride(
       session,
-      determineRawDecision(session, options.repo),
+      determineRawDecision(
+        session,
+        options.repo,
+        options.homeRoot,
+        options.homeNormalization ?? true
+      ),
       options.overrides
     );
 

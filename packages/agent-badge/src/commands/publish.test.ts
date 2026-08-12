@@ -401,7 +401,9 @@ describe("runPublishCommand", () => {
       expect(attributeBackfillSessionsMock).toHaveBeenCalledWith({
         repo: scan.repo,
         sessions: scan.sessions,
-        overrides: defaultAgentBadgeState.overrides.ambiguousSessions
+        overrides: defaultAgentBadgeState.overrides.ambiguousSessions,
+        homeRoot: fixture.homeRoot,
+        homeNormalization: true
       });
       const publishCall = publishBadgeToGistMock.mock.calls[0]?.[0];
       const sessionDigest = buildSharedOverrideDigest("codex:codex-session-1");

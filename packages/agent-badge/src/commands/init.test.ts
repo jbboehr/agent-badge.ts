@@ -770,7 +770,9 @@ describe("runInitCommand", () => {
         }
       });
       expect(refreshCache).toEqual({
-        version: 2,
+        version: 3,
+        homeNormalization: true,
+        homeNormalizationContextDigest: expect.stringMatching(/^[0-9a-f]{64}$/),
         costsComputed: true,
         entries: {}
       });

@@ -3,6 +3,7 @@ import type { NormalizedSessionSummary } from "../providers/session-summary.js";
 export type AttributionEvidenceKind =
   | "repo-root"
   | "git-remote"
+  | "home-relative-cwd"
   | "normalized-cwd"
   | "transcript-correlation"
   | "user-override";
