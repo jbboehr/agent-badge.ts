@@ -11,7 +11,7 @@
 }:
 
 let
-  agentBadgeDirectory = agent-badge-unwrapped.agentBadgeDirectory;
+  agentBadgeDirectories = agent-badge-unwrapped.agentBadgeDirectories;
   authenticatedEntrypoint = writeShellScript "agent-badge-authenticated" ''
     if [[ ! -r /run/secrets/gh-token ]]; then
       echo "agent-badge: GitHub token was not provided to the sandbox" >&2
@@ -331,27 +331,48 @@ writeShellApplication {
       fi
     fi
 
-    mount_agent_badge_directory() {
+    readonly agent_badge_directories=( ${lib.escapeShellArgs agentBadgeDirectories} )
+
+    mount_agent_badge_directories() {
       local access="$1"
-      local agent_badge_directory="$project_root/${agentBadgeDirectory}"
+      local agent_badge_directory
+      local agent_badge_parent_directory
+      local agent_badge_relative_directory
+      local found="false"
 
-      if [[ -L "$agent_badge_directory" ]]; then
-        echo "agent-badge: refusing a symlinked ${agentBadgeDirectory} directory" >&2
-        exit 1
-      fi
+      for agent_badge_relative_directory in "''${agent_badge_directories[@]}"; do
+        agent_badge_directory="$project_root/$agent_badge_relative_directory"
+        agent_badge_parent_directory="''${agent_badge_directory%/*}"
 
-      if [[ ! -d "$agent_badge_directory" ]]; then
-        if [[ "$access" == "rw" ]]; then
-          echo "agent-badge: ${agentBadgeDirectory} is not initialized in $project_root" >&2
+        if [[ -L "$agent_badge_directory" ]]; then
+          echo "agent-badge: refusing a symlinked $agent_badge_relative_directory directory" >&2
           exit 1
         fi
-        return
-      fi
 
-      if [[ "$access" == "rw" ]]; then
-        sandbox_args+=(--bind "$agent_badge_directory" "$agent_badge_directory")
-      else
-        sandbox_args+=(--ro-bind "$agent_badge_directory" "$agent_badge_directory")
+        if [[ "$agent_badge_parent_directory" != "$project_root" && -L "$agent_badge_parent_directory" ]]; then
+          echo "agent-badge: refusing a symlinked parent for $agent_badge_relative_directory" >&2
+          exit 1
+        fi
+
+        if [[ ! -d "$agent_badge_directory" ]]; then
+          continue
+        fi
+
+        found="true"
+        if [[ "$agent_badge_parent_directory" != "$project_root" ]]; then
+          sandbox_args+=(--dir "$agent_badge_parent_directory")
+        fi
+
+        if [[ "$access" == "rw" ]]; then
+          sandbox_args+=(--bind "$agent_badge_directory" "$agent_badge_directory")
+        else
+          sandbox_args+=(--ro-bind "$agent_badge_directory" "$agent_badge_directory")
+        fi
+      done
+
+      if [[ "$access" == "rw" && "$found" != "true" ]]; then
+        echo "agent-badge: neither .github/agent-badge nor .agent-badge is initialized in $project_root" >&2
+        exit 1
       fi
     }
 
@@ -445,17 +466,17 @@ writeShellApplication {
           mount_git_metadata false false
           ;;
         agent-rw-git-ro)
-          mount_agent_badge_directory rw
+          mount_agent_badge_directories rw
           mount_git_metadata true false
           ;;
         agent-rw)
-          mount_agent_badge_directory rw
+          mount_agent_badge_directories rw
           ;;
         agent-ro)
-          mount_agent_badge_directory ro
+          mount_agent_badge_directories ro
           ;;
         doctor-ro)
-          mount_agent_badge_directory ro
+          mount_agent_badge_directories ro
           mount_git_metadata true true
 
           shopt -s nullglob

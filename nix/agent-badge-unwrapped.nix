@@ -9,6 +9,10 @@
 
 let
   agentBadgeDirectory = ".agent-badge";
+  agentBadgeDirectories = [
+    ".github/agent-badge"
+    agentBadgeDirectory
+  ];
   package = lib.importJSON ../packages/agent-badge/package.json;
 in
 buildNpmPackage {
@@ -40,6 +44,7 @@ buildNpmPackage {
       packages/core/src/providers/grok/grok-adapter.test.ts \
       packages/core/src/providers/provider-directories.test.ts \
       packages/core/src/publish/readme-badge.test.ts \
+      packages/core/src/repo/agent-badge-directory.test.ts \
       packages/core/src/scan/refresh-cache.test.ts \
       packages/agent-badge/src/commands/config.test.ts \
       packages/agent-badge/src/commands/doctor.test.ts \
@@ -72,5 +77,5 @@ buildNpmPackage {
     platforms = lib.platforms.unix;
   };
 
-  passthru = { inherit agentBadgeDirectory; };
+  passthru = { inherit agentBadgeDirectories agentBadgeDirectory; };
 }
